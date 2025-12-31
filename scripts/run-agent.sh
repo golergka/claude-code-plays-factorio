@@ -45,9 +45,9 @@ while true; do
 
     # Run Claude Code in headless mode with conversation resume
     # --continue: Resume the previous conversation if it exists
-    # --dangerously-skip-permissions: Skip permission prompts (use with caution)
+    # --dangerously-skip-permissions: Skip permission prompts for automation
     if claude --continue --dangerously-skip-permissions \
-        --print "You are a Factorio AI agent. Check your current game state and continue building your factory. Start by running: pnpm eval \"game.player.position\" to see where you are."; then
+        --print "You are a Factorio AI agent. Check your current game state and continue building your factory. Start by running: pnpm eval \"player.position\" to see where you are. Use pnpm say to chat with viewers."; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] Agent session ended normally"
     else
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] Agent session ended with error (exit code: $?)"

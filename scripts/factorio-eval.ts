@@ -183,13 +183,18 @@ function truncateCode(code: string): string {
 function wrapLuaCode(code: string): string {
   const playerAccessor = getPlayerAccessor();
 
-  // Inject a 'player' variable pointing to the target player
-  // This allows code to use 'player' instead of 'game.player'
-  const playerSetup = `local player = ${playerAccessor}; local surface = player.surface; local force = player.force; `;
+  // Check if the code uses player/surface/force variables
+  const needsPlayer = /\b(player|surface|force)\b/.test(code);
+
+  // Inject player variables only if needed
+  let playerSetup = "";
+  if (needsPlayer) {
+    playerSetup = `local player = ${playerAccessor}; if not player then rcon.print("ERROR: No player connected yet. Connect to the server first."); return end; local surface = player.surface; local force = player.force; `;
+  }
 
   // Optionally show the command in game chat (for streaming)
   let displayCode = "";
-  if (SHOW_COMMANDS) {
+  if (SHOW_COMMANDS && needsPlayer) {
     const escapedCode = escapeForLua(truncateCode(code));
     // Use game.print with colored text
     displayCode = `game.print("[color=0.5,0.8,1][AI][/color] ${escapedCode}"); `;

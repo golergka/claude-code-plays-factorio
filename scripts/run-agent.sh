@@ -54,12 +54,15 @@ while true; do
     # --dangerously-skip-permissions: Skip permission prompts for automation
     # --output-format stream-json: Real-time streaming JSON output
     # Pipe through claude-code-log for readable output
-    # Use --no-session-persistence for fresh sessions without conflicts
-    if stdbuf -oL "$CLAUDE_BIN" --no-session-persistence --dangerously-skip-permissions \
+    # Run from .agent-workspace subdirectory for separate session context
+    # Use --add-dir to give access to parent project
+    cd "$PROJECT_DIR/agent-workspace"
+    if stdbuf -oL "$CLAUDE_BIN" --continue --dangerously-skip-permissions \
         --verbose \
         --print \
         --output-format stream-json \
-        "You are a Factorio AI agent. Check your current game state and continue building your factory. Start by running: pnpm eval \"player.position\" to see where you are. Use pnpm say to chat with viewers." \
+        --add-dir "$PROJECT_DIR" \
+        "You are a Factorio AI agent playing Factorio. Run commands from $PROJECT_DIR directory. Check game state: pnpm --prefix $PROJECT_DIR eval \"player.position\"" \
         | tee -a "$AGENT_LOG" \
         | jq --unbuffered -C .; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] Agent session ended normally"

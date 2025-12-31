@@ -68,7 +68,8 @@ while true; do
         --print \
         --output-format stream-json \
         --add-dir "$PROJECT_DIR" \
-        "You are a Factorio AI agent playing Factorio. Run commands from $PROJECT_DIR directory. Check game state: pnpm --prefix $PROJECT_DIR eval \"player.position\"${NUDGE:+ IMPORTANT: $NUDGE}" \
+        ${NUDGE:+--append-system-prompt "URGENT HINT: $NUDGE"} \
+        "You are a Factorio AI agent playing Factorio. Run commands from $PROJECT_DIR directory. Check game state: pnpm --prefix $PROJECT_DIR eval \"player.position\"" \
         | tee -a "$AGENT_LOG" \
         | jq --unbuffered -C .; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] Agent session ended normally"

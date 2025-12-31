@@ -14,6 +14,21 @@ You are the **orchestrator Claude** - responsible for managing the Factorio AI a
 - Execute Lua commands to play the game yourself
 - Interfere with the agent's gameplay
 - Break the monitoring loop (keep it running indefinitely)
+- Write Lua code for the child agent - let it write its own helpers
+- Call scripts directly - ALWAYS use `pnpm run` commands
+- Write inline bash commands that need user approval - put them in scripts!
+
+## Scripting Rule
+
+**EVERY TIME you find yourself writing inline bash**, ask: "Should this be a script?"
+
+If the command:
+- Needs to be repeatable
+- Requires user approval
+- Has multiple steps
+- Involves sleeping/waiting
+
+Then **PUT IT IN A SCRIPT FILE** and add it to package.json. Never write inline bash that requires approval - it breaks your workflow.
 
 ## REMEMBER TO
 
@@ -21,78 +36,76 @@ You are the **orchestrator Claude** - responsible for managing the Factorio AI a
 - Take periodic screenshots to monitor progress
 - Check agent status regularly
 
-## Helper Scripts & Commands
+## Available pnpm Commands
 
-Use pnpm commands for efficiency:
+**ALWAYS use these instead of calling scripts directly:**
 
 ```bash
-# Check if agent is alive
-pnpm agent:status
+# Server management
+pnpm server:start          # Start Factorio server (uses latest autosave)
 
-# Get factory status in one line
-pnpm factory:status
+# Agent management
+pnpm agent:start            # Start the child agent (kills existing first)
+pnpm agent:status           # Check if agent is alive (returns alive:PID or dead)
 
-# Take a timestamped screenshot
-pnpm screenshot [suffix]
+# Factory monitoring
+pnpm factory:status         # One-line factory status
+pnpm screenshot [suffix]    # Take timestamped screenshot
+pnpm analyze                # OpenAI Vision analysis of current state
 
-# Analyze screenshot with OpenAI Vision (strategic hints!)
-pnpm analyze
+# Game interaction (use sparingly - agent should do this)
+pnpm eval "lua code"        # Execute Lua code via RCON
+pnpm eval:file path.lua     # Execute Lua file via RCON
+pnpm say "message"          # Send chat message in game
+pnpm hint "message"         # Send hint to child agent (appears in their next output)
 
-# Start the chat bridge (for Twitch chat integration)
-pnpm chat:bridge
+# Utilities
+pnpm chat:bridge            # Start Twitch chat integration
 ```
-
-You can also use the bash scripts directly:
-- `./scripts/check-agent-alive.sh` - returns "alive:PID" or "dead"
-- `./scripts/factory-status.sh` - one-liner status
-- `./scripts/take-screenshot.sh [suffix]` - timestamped screenshot
-- `./scripts/analyze-screenshot.ts` - OpenAI vision analysis
 
 ## Starting/Restarting the Agent
 
 ```bash
-# Start agent with a nudge message
-./scripts/run-agent.sh "Your nudge message here"
+pnpm agent:start "Your nudge message here"
 ```
 
 The nudge message should include:
 - Current tech count
 - Current research progress
 - Any issues to address (drills down, resource shortage, etc.)
-- Encouragement/guidance
 
 Example:
 ```bash
-./scripts/run-agent.sh "28 techs! Circuit-network at 50%. Drills need fuel, iron is low. Keep pushing!"
+pnpm agent:start "28 techs! Gate at 80%. Keep researching!"
 ```
 
 ## Monitoring Loop Pattern
 
 ```bash
 # 1. Check if agent is alive
-./scripts/check-agent-alive.sh
+pnpm agent:status
 
 # 2. If dead, restart it
-./scripts/run-agent.sh "nudge message"
+pnpm agent:start "nudge message"
 
 # 3. Check factory progress
-./scripts/factory-status.sh
+pnpm factory:status
 
 # 4. Take occasional screenshots
-./scripts/take-screenshot.sh milestone-30techs
+pnpm screenshot milestone-30techs
 
-# 5. Wait 3-5 minutes, repeat
+# 5. Wait, repeat
 sleep 180
 ```
 
 ## Reading Agent Output
 
-Agent output is written to a background task. Check with:
+Agent output is written to a background task. Use TaskOutput tool or:
 ```bash
 tail -50 /tmp/claude/-Users-golergka-Projects-factorio-agent/tasks/TASK_ID.output
 ```
 
-Or use grep to find relevant info:
+Filter for key info:
 ```bash
 tail -100 /tmp/claude/.../tasks/TASK_ID.output | grep -E "Research:|Coal:|Iron:|Drills"
 ```
@@ -118,65 +131,31 @@ Screenshots are saved to:
 **IMPORTANT:** You can and should regularly view screenshots to understand factory state!
 
 ```bash
-# Take and view screenshot
-./scripts/take-screenshot.sh check
+pnpm screenshot check
 # Then use Read tool to view:
 Read "/Users/golergka/Library/Application Support/factorio/script-output/orchestrator-TIMESTAMP-check.png"
 ```
 
-Do this periodically to:
-- Visually verify factory layout
-- Check drill/furnace placement
-- Spot resource patches
-- Understand spatial relationships
-
-## Direct Game Queries (Fallback)
-
-If helper scripts fail, you can query the game directly:
-```bash
-pnpm eval "rcon.print('Techs: ' .. #force.technologies)"
-```
-
-But prefer using the helper scripts to keep things clean.
-
 ## Key Files
 
-- `scripts/run-agent.sh` - Agent launcher with lock mechanism
-- `scripts/check-agent-alive.sh` - Quick alive check
-- `scripts/factory-status.sh` - Factory status one-liner
-- `scripts/take-screenshot.sh` - Timestamped screenshots
+- `scripts/*.sh` - Helper scripts (use via pnpm, not directly!)
+- `scripts/*.ts` - TypeScript tools
 - `agent-workspace/CLAUDE.md` - Agent's instructions
 - `agent-workspace/lua/` - Agent's Lua helper scripts
 
 ## Improving the Child Agent
 
-**IMPORTANT:** You should periodically improve the child agent (in agent-workspace/).
+**IMPORTANT:** You can update the agent's CLAUDE.md with better instructions, but do NOT write Lua code for them. Let the child Claude create its own helpers - this helps it learn and adapt.
 
-Since the child Claude cannot restart itself, YOU are responsible for:
-1. Creating new Lua helper scripts in `agent-workspace/lua/`
-2. Updating `agent-workspace/CLAUDE.md` with better instructions
-3. Creating Claude hooks in `agent-workspace/.claude/settings.json`
-4. Writing skills for common agent tasks
+What you CAN do:
+- Update `agent-workspace/CLAUDE.md` with better instructions/patterns
+- Add clarifications when agent struggles
 
-**After making improvements, restart the agent** so it picks up the changes:
+What you should NOT do:
+- Write Lua helper files for the agent
+- Directly modify agent's lua/ directory
+
+After updating CLAUDE.md, restart the agent:
 ```bash
-# Kill current agent
-kill $(cat .agent.lock.d/pid)
-# Wait for it to die
-sleep 5
-# Restart with nudge
-./scripts/run-agent.sh "Improvements made! Check your CLAUDE.md for new instructions."
+pnpm agent:start "CLAUDE.md updated! Check the new instructions."
 ```
-
-**What to improve:**
-- Add new Lua helpers when you notice repetitive patterns
-- Update agent's CLAUDE.md when agent struggles with certain tasks
-- Create skills for multi-step operations (crafting chains, building sequences)
-- Add hooks for automatic behaviors
-
-**Use claude-code-guide** to research how to write skills, hooks, and subagents:
-```
-Task tool with subagent_type='claude-code-guide'
-```
-
-This is meta-level guidance - you guide the child Claude by improving its tools and instructions, not by playing the game yourself.

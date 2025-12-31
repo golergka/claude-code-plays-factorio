@@ -11,9 +11,17 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
-# Load environment variables
+# Load environment variables (handles paths with spaces)
 if [ -f "$PROJECT_DIR/.env" ]; then
-    export $(grep -v '^#' "$PROJECT_DIR/.env" | xargs)
+    while IFS='=' read -r key value; do
+        # Skip comments and empty lines
+        [[ "$key" =~ ^#.*$ ]] && continue
+        [[ -z "$key" ]] && continue
+        # Remove quotes if present, export the variable
+        value="${value%\"}"
+        value="${value#\"}"
+        export "$key=$value"
+    done < "$PROJECT_DIR/.env"
 fi
 
 # Factorio paths

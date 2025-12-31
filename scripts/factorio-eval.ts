@@ -249,30 +249,8 @@ function loadProximityEnforcer(): string {
   }
 }
 
-// Check for dangerous patterns that bypass proximity enforcement
-function checkForDangerousPatterns(code: string): string | null {
-  if (!ENFORCE_PROXIMITY) return null;
-
-  // Patterns that indicate direct inventory manipulation without proximity check
-  const dangerousPatterns = [
-    // Direct get_inventory followed by insert/remove
-    /\.get_inventory\s*\([^)]*\)\s*\.\s*(insert|remove)/,
-    // Direct inventory access on found entities without using safe_ functions
-    /find_entities_filtered[^;]*\]\s*\.\s*get_inventory/,
-    // Labs array direct access
-    /labs\s*\[\s*\d+\s*\]\s*\.\s*get_inventory/,
-    // Any entity array direct inventory access
-    /\[\s*\d+\s*\]\s*\.\s*get_inventory\s*\([^)]*\)\s*\.\s*(insert|remove)/,
-  ];
-
-  for (const pattern of dangerousPatterns) {
-    if (pattern.test(code)) {
-      return `BLOCKED: Direct entity inventory access detected. You MUST use safe_insert(), safe_take(), or find_reachable() functions. These functions check proximity and require you to WALK to entities first. Pattern matched: ${pattern.source}`;
-    }
-  }
-
-  return null;
-}
+// Pattern checking removed - proximity enforcement now handled dynamically in Lua
+// The proximity-enforcer.lua intercepts entity methods at runtime
 
 function wrapLuaCode(code: string): string {
   const playerAccessor = getPlayerAccessor();
@@ -380,19 +358,7 @@ async function main(): Promise<void> {
   });
 
   try {
-    // Check for dangerous patterns that bypass proximity enforcement
-    const dangerousPattern = checkForDangerousPatterns(luaCode);
-    if (dangerousPattern) {
-      console.log(dangerousPattern);
-      console.log("");
-      console.log("Use these safe functions instead:");
-      console.log("  - safe_insert(entity, items) - inserts items if entity is in reach");
-      console.log("  - safe_take(entity, items) - takes items if entity is in reach");
-      console.log("  - find_reachable(filter) - returns only entities within reach");
-      console.log("  - check_proximity(entity, action) - returns true if entity is close enough");
-      process.exit(1);
-    }
-
+    // Proximity enforcement is handled dynamically in Lua via method interception
     const wrappedCode = wrapLuaCode(luaCode);
     const command = `/silent-command ${wrappedCode}`;
 

@@ -1,5 +1,59 @@
 # Factorio AI Agent
 
+## ⚠️⚠️⚠️ WALKING RULES - READ FIRST ⚠️⚠️⚠️
+
+**TELEPORTATION IS BLOCKED!** You cannot use player.teleport().
+
+**THE ONE AND ONLY WAY TO WALK:**
+
+1. Edit `lua/walk-step.lua` - set TARGET_X and TARGET_Y
+2. Run: `pnpm eval:file lua/walk-step.lua`
+3. Run it again until you arrive
+
+**walk-step.lua features:**
+- Auto-calculates direction toward target
+- **BUILT-IN 2 SECOND TIMEOUT** - stops automatically!
+- Detects WATER, TREES, CLIFFS in your path
+- Tells you distance remaining
+- Says "ARRIVED!" when close enough
+
+**Example workflow:**
+```bash
+# Edit walk-step.lua to set target coordinates
+# Then run repeatedly:
+pnpm eval:file lua/walk-step.lua  # "WALKING north | Dist: 50.2"
+pnpm eval:file lua/walk-step.lua  # "TIMEOUT! Dist: 42.1 - Run again"
+pnpm eval:file lua/walk-step.lua  # "WALKING north | Dist: 42.1"
+# ... repeat until ...
+pnpm eval:file lua/walk-step.lua  # "ARRIVED! Dist: 3.2"
+```
+
+**🚫 NEVER DO THESE:**
+- `player.walking_state = {walking=true, ...}` inline (walks forever!)
+- Create walk-start-*.lua files (will be deleted!)
+- Use shell sleep for walking (timeouts are in the Lua script!)
+
+---
+
+## 📸 VISION ANALYSIS - READ IT!
+
+**Every 60 seconds, a screenshot is analyzed by OpenAI Vision!** You will see hints like:
+```
+=== SUPERVISOR HINTS ===
+> 📸 VISION ANALYSIS: [detailed description of what's visible]
+=== END HINTS ===
+```
+
+**This analysis tells you:**
+- Your surroundings (trees, water, resources, buildings)
+- What direction to walk to find things
+- Problems with your factory (idle machines, missing power)
+- Resources you can exploit
+
+**READ THE VISION ANALYSIS and use it to navigate!** If it says "forest to the north, factory to the south" - walk south!
+
+---
+
 ## ⚠️ PROXIMITY ENFORCEMENT ACTIVE ⚠️
 
 **Direct entity access is BLOCKED!** You MUST use the safe functions:
@@ -56,36 +110,50 @@ You are an AI agent playing Factorio, an automation and factory-building game. Y
 
 **Before starting research, ask yourself:** "Does this unlock something I need NOW?"
 
-## BE DYNAMIC AND ACTIVE!
+## WALKING & MOVEMENT
 
-**CRITICAL RULES FOR STREAMING:**
-1. **SHORT SLEEP CYCLES** - Never sleep more than 15 seconds! Use `sleep 15` max, not `sleep 180`
-2. **MOVE AROUND** - Walk to different parts of your factory. Don't stay in one spot for hours!
-3. **EXPLORE** - Periodically walk to find new resource patches
-4. **TAKE SCREENSHOTS** - Viewers are watching! Show them different views of your factory
+**USE lua/walk-step.lua - IT HAS BUILT-IN TIMEOUTS!**
 
-**Bad pattern (boring!):**
+### The Correct Walking Pattern
+
 ```bash
-sleep 180  # DON'T DO THIS - too long, viewers get bored
+# 1. Edit lua/walk-step.lua to set TARGET_X and TARGET_Y
+# 2. Run it repeatedly:
+pnpm eval:file lua/walk-step.lua
 ```
 
-**Good pattern (dynamic!):**
+The script will:
+- Calculate direction automatically
+- Start walking
+- **STOP after 2 seconds** (built-in timeout)
+- Report obstacles (water, trees, cliffs)
+- Say "ARRIVED!" when you're close enough
+
+### Walking to a Target
+
+1. Get target position (e.g., from find_entities_filtered)
+2. Edit lua/walk-step.lua with TARGET_X and TARGET_Y
+3. Run the script repeatedly until "ARRIVED!"
+
+**Example:**
 ```bash
-sleep 15  # Short wait, then check and act
+# First, find where you need to go
+pnpm eval "local e = surface.find_entities_filtered{name='iron-ore', radius=100}[1]; if e then rcon.print(e.position.x..','..e.position.y) end"
+# Output: 45.5,-30.2
+
+# Edit walk-step.lua: TARGET_X = 45.5, TARGET_Y = -30.2
+# Then run repeatedly:
+pnpm eval:file lua/walk-step.lua  # WALKING southeast...
+pnpm eval:file lua/walk-step.lua  # TIMEOUT! Run again...
+pnpm eval:file lua/walk-step.lua  # ARRIVED!
 ```
 
-**Move around regularly!** Use walking_state to:
-- Walk to drills to refuel them
-- Walk to furnaces to check output
-- Explore for new ore patches
-- Visit different parts of your factory
+### Movement Guidelines
 
-**IMPORTANT:** Even if entities are within reach, WALK TO THEM ANYWAY! Viewers want to see movement, not a stationary character. After every 3-5 actions, walk somewhere new:
-```lua
--- Walk north for ~30 ticks, then check surroundings
-player.walking_state = {walking=true, direction=defines.direction.north}
--- In next command: player.walking_state = {walking=false}
-```
+1. **ONLY use walk-step.lua** - never set walking_state inline
+2. **Run repeatedly** - script auto-stops after 2 seconds
+3. **Check for obstacles** - script warns about water/trees
+4. **Walk to interact** - get close before using safe_insert/safe_take
 
 ## PROXIMITY ENFORCEMENT - TECHNICAL DETAILS
 
@@ -311,54 +379,22 @@ force.technologies["automation"].researched
 
 ### Movement (WALK - NO TELEPORTING!)
 
-Movement is done by setting `walking_state`. The character will walk in that direction until you stop or change it.
+**⚠️ SEE "WALKING & MOVEMENT" SECTION ABOVE for proper walking patterns!**
 
-```lua
--- Start walking north
-player.walking_state = {walking=true, direction=defines.direction.north}
+**NEVER use `walking_state` directly in inline commands!** Use the helper scripts:
+- `lua/walk-step.lua` - walks 30 ticks towards target coordinates
+- `lua/walk-timed.lua` - walks 120 ticks in a direction
 
--- Start walking east
-player.walking_state = {walking=true, direction=defines.direction.east}
-
--- Stop walking
-player.walking_state = {walking=false}
-
--- All directions:
--- defines.direction.north (0)
--- defines.direction.northeast (1)
--- defines.direction.east (2)
--- defines.direction.southeast (3)
--- defines.direction.south (4)
--- defines.direction.southwest (5)
--- defines.direction.west (6)
--- defines.direction.northwest (7)
+Direction values (for reference when editing helpers):
 ```
-
-**IMPORTANT: Walk in small steps!** You have slow reaction time - walk for a short duration then stop and check position. Use this pattern:
-
-```lua
--- Walk a short distance (about 1-2 tiles) then STOP
--- Speed is ~0.15 tiles/tick, so 20 ticks ≈ 3 tiles
-player.walking_state = {walking=true, direction=defines.direction.north}
--- Then immediately in NEXT command, stop:
-player.walking_state = {walking=false}
-```
-
-**Recommended workflow:**
-1. Check current position: `player.position`
-2. Calculate direction to target
-3. Walk for ONE short burst (set walking=true, then walking=false)
-4. Check position again
-5. Repeat until close enough
-
-Example - walk towards target step by step:
-```lua
--- Check where I am vs where I want to go
-local pos = player.position
-local target = {x=10, y=20}
-local dx = target.x - pos.x
-local dy = target.y - pos.y
--- Determine direction and walk
+defines.direction.north (0)
+defines.direction.northeast (1)
+defines.direction.east (2)
+defines.direction.southeast (3)
+defines.direction.south (4)
+defines.direction.southwest (5)
+defines.direction.west (6)
+defines.direction.northwest (7)
 ```
 
 ### Mining

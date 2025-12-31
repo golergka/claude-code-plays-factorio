@@ -3,19 +3,19 @@
  * Factorio Lua Evaluation Script
  *
  * Sends Lua code to Factorio via RCON and returns the result.
- * The code is wrapped with rcon.print() to return output.
+ * Also monitors the server log for chat messages and includes them in output.
  *
  * Usage:
- *   pnpm eval "game.player.position"
- *   pnpm eval "game.player.get_main_inventory().get_contents()"
+ *   pnpm eval "player.position"
+ *   pnpm eval "player.get_main_inventory().get_contents()"
  *   echo "game.tick" | pnpm eval
- *
- * For structured data, the script automatically wraps results with serpent.line()
- * unless the code already contains rcon.print().
  */
 
 import "dotenv/config";
 import { Rcon } from "rcon-ts";
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
 
 const RCON_HOST = process.env.FACTORIO_RCON_HOST ?? "localhost";
 const RCON_PORT = parseInt(process.env.FACTORIO_RCON_PORT ?? "27015", 10);
@@ -25,10 +25,124 @@ const PLAYER_TARGET = process.env.FACTORIO_PLAYER ?? "1";
 // Show commands in game chat for streaming
 const SHOW_COMMANDS = process.env.FACTORIO_SHOW_COMMANDS === "true";
 // Max length for displayed commands (0 = no limit)
-const MAX_DISPLAY_LENGTH = parseInt(process.env.FACTORIO_MAX_DISPLAY_LENGTH ?? "200", 10);
+const MAX_DISPLAY_LENGTH = parseInt(
+  process.env.FACTORIO_MAX_DISPLAY_LENGTH ?? "200",
+  10
+);
+// Path to Factorio server log for reading chat
+const FACTORIO_LOG_PATH =
+  process.env.FACTORIO_LOG_PATH ?? getDefaultLogPath();
+// State file to track last read position
+const STATE_FILE = path.join(os.tmpdir(), "factorio-agent-chat-state.json");
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000;
+
+function getDefaultLogPath(): string {
+  // Default log paths for different platforms
+  if (process.platform === "darwin") {
+    return path.join(
+      os.homedir(),
+      "Library/Application Support/factorio/factorio-current.log"
+    );
+  } else if (process.platform === "win32") {
+    return path.join(
+      process.env.APPDATA ?? "",
+      "Factorio/factorio-current.log"
+    );
+  } else {
+    return path.join(os.homedir(), ".factorio/factorio-current.log");
+  }
+}
+
+interface ChatState {
+  lastPosition: number;
+  lastModified: number;
+}
+
+interface ChatMessage {
+  timestamp: string;
+  player: string;
+  message: string;
+}
+
+function loadChatState(): ChatState {
+  try {
+    if (fs.existsSync(STATE_FILE)) {
+      return JSON.parse(fs.readFileSync(STATE_FILE, "utf-8"));
+    }
+  } catch {
+    // Ignore errors, start fresh
+  }
+  return { lastPosition: 0, lastModified: 0 };
+}
+
+function saveChatState(state: ChatState): void {
+  try {
+    fs.writeFileSync(STATE_FILE, JSON.stringify(state));
+  } catch {
+    // Ignore errors
+  }
+}
+
+function readNewChatMessages(): ChatMessage[] {
+  const messages: ChatMessage[] = [];
+
+  if (!fs.existsSync(FACTORIO_LOG_PATH)) {
+    return messages;
+  }
+
+  try {
+    const stats = fs.statSync(FACTORIO_LOG_PATH);
+    const state = loadChatState();
+
+    // If file was modified or rotated, read from appropriate position
+    let startPosition = state.lastPosition;
+    if (stats.mtimeMs < state.lastModified || stats.size < state.lastPosition) {
+      // Log was rotated, start from beginning
+      startPosition = 0;
+    }
+
+    // Read the file from last position
+    const fd = fs.openSync(FACTORIO_LOG_PATH, "r");
+    const buffer = Buffer.alloc(stats.size - startPosition);
+    fs.readSync(fd, buffer, 0, buffer.length, startPosition);
+    fs.closeSync(fd);
+
+    const content = buffer.toString("utf-8");
+    const lines = content.split("\n");
+
+    // Parse chat messages - format: "   0.000 [CHAT] PlayerName: message"
+    // or "[CHAT] PlayerName: message"
+    const chatRegex = /^(?:\s*[\d.]+\s+)?\[CHAT\]\s+([^:]+):\s*(.+)$/;
+
+    for (const line of lines) {
+      const match = line.match(chatRegex);
+      if (match) {
+        const [, player, message] = match;
+        // Skip messages from the AI itself (our own prints)
+        // These include [AI] for commands and [AI Chat] for responses
+        if (!message.startsWith("[AI]") && !message.startsWith("[AI Chat]")) {
+          messages.push({
+            timestamp: new Date().toISOString(),
+            player: player.trim(),
+            message: message.trim(),
+          });
+        }
+      }
+    }
+
+    // Save new position
+    saveChatState({
+      lastPosition: stats.size,
+      lastModified: stats.mtimeMs,
+    });
+  } catch {
+    // Ignore errors reading log
+  }
+
+  return messages;
+}
 
 async function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -77,7 +191,7 @@ function wrapLuaCode(code: string): string {
   let displayCode = "";
   if (SHOW_COMMANDS) {
     const escapedCode = escapeForLua(truncateCode(code));
-    // Use game.print with a robot emoji and colored text
+    // Use game.print with colored text
     displayCode = `game.print("[color=0.5,0.8,1][AI][/color] ${escapedCode}"); `;
   }
 
@@ -130,7 +244,9 @@ async function main(): Promise<void> {
     console.error("Usage: pnpm eval <lua_code>");
     console.error("   or: echo <lua_code> | pnpm eval");
     console.error("");
-    console.error("The script injects 'player', 'surface', and 'force' variables automatically.");
+    console.error(
+      "The script injects 'player', 'surface', and 'force' variables automatically."
+    );
     console.error(`Currently targeting: ${getPlayerAccessor()}`);
     console.error("");
     console.error("Examples:");
@@ -143,7 +259,9 @@ async function main(): Promise<void> {
   }
 
   if (!RCON_PASSWORD) {
-    console.error("Error: FACTORIO_RCON_PASSWORD environment variable not set");
+    console.error(
+      "Error: FACTORIO_RCON_PASSWORD environment variable not set"
+    );
     console.error("Copy .env.example to .env and configure your RCON password");
     process.exit(1);
   }
@@ -160,7 +278,20 @@ async function main(): Promise<void> {
 
     const result = await executeWithRetry(rcon, command);
 
-    // Output the result
+    // Check for new chat messages
+    const chatMessages = readNewChatMessages();
+
+    // Output chat messages first if any
+    if (chatMessages.length > 0) {
+      console.log("=== NEW CHAT MESSAGES ===");
+      for (const msg of chatMessages) {
+        console.log(`[${msg.player}]: ${msg.message}`);
+      }
+      console.log("=== END CHAT ===");
+      console.log("");
+    }
+
+    // Output the command result
     if (result) {
       console.log(result);
     }

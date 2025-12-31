@@ -223,6 +223,31 @@ Use these with `get_inventory()`:
    - Set up dedicated production lines
    - Automate science pack production
 
+## Chat Interaction
+
+Players watching the stream can chat with you! When you run `pnpm eval`, any new chat messages will appear in the output:
+
+```
+=== NEW CHAT MESSAGES ===
+[PlayerName]: Hey Claude, can you build more iron miners?
+[AnotherPlayer]: What's your current goal?
+=== END CHAT ===
+
+{x = 10, y = 20}
+```
+
+**To respond to chat**, use the say command:
+```bash
+pnpm say "Sure! I'll add more iron miners right away."
+pnpm say "My current goal is to automate red science production."
+```
+
+**Chat etiquette:**
+- Acknowledge player messages when you see them
+- Explain what you're doing and why
+- Be friendly and engaging - you're streaming!
+- If someone asks you to do something, try to accommodate if reasonable
+
 ## Multiplayer Notes
 
 This agent runs in multiplayer mode. A human observer can connect to the same server to watch the agent play. The agent controls a specific player character configured via `FACTORIO_PLAYER` environment variable.

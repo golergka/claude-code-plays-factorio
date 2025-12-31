@@ -37,6 +37,27 @@ Then call: `pnpm --prefix /Users/golergka/Projects/factorio-agent eval:file lua/
 
 **Stop doing everything inline. Build tools. Commit them. Reuse them.**
 
+## MEMORY: Keep Track of Your Progress!
+
+You have poor long-term memory. To remember what you've built:
+
+1. **Create a notes.md file** - Write down what you've built and where!
+2. **Query the game** - Use `surface.find_entities_filtered{force=force}` to see YOUR buildings
+3. **Use TodoWrite** - Track your progress in the todo list
+
+Example notes.md:
+```markdown
+## My Factory Layout
+- Stone furnace at (-2, 44)
+- Burner mining drill at (-2, 47) on coal
+- Next: Build iron smelting setup
+
+## Inventory notes
+- Need more iron plates for automation
+```
+
+**Always check game state before assuming you need to build something!**
+
 ## How to Play
 
 You are a Claude Code instance with full file editing and git capabilities. Use these powers!

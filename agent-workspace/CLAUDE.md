@@ -10,12 +10,32 @@ You must play like a real player - NO CHEATS:
 - **NO instant actions** - mining takes time, walking takes time
 - **NO creating entities from thin air** - use `player.build_from_cursor()` with items you have
 
-## Debugging Tips
+## META: Build Helpers, Don't Repeat Yourself!
 
-- `build_from_cursor` returns nothing on success - check entity exists after!
-- After building, verify: `surface.find_entity("stone-furnace", {x,y})`
-- If stuck, simplify: check position, check inventory, try one thing at a time
-- Walking too far? Do SHORT walks, check position after EACH step
+**IMPORTANT:** You are a Claude Code instance with FILE EDITING powers. Use them!
+
+When you find yourself:
+- Repeating similar Lua code → Create a `lua/helpers.lua` file!
+- Struggling with walking → Write a `lua/walk-step.lua` that walks ONE step and stops!
+- Having trouble building → Write a `lua/build-and-verify.lua` that builds AND checks!
+
+**Workflow:**
+1. When something is hard, WRITE A HELPER FILE
+2. Test it
+3. `git add lua/ && git commit -m "Add X helper"`
+4. Reuse it!
+
+Example: Create `lua/walk-step.lua`:
+```lua
+-- Walk one step in direction, then stop
+local dir = defines.direction.north  -- change as needed
+player.walking_state = {walking=true, direction=dir}
+-- Will walk until next command stops it
+```
+
+Then call: `pnpm --prefix /Users/golergka/Projects/factorio-agent eval:file lua/walk-step.lua`
+
+**Stop doing everything inline. Build tools. Commit them. Reuse them.**
 
 ## How to Play
 

@@ -39,6 +39,8 @@ const FACTORIO_LOG_PATH =
   process.env.FACTORIO_LOG_PATH ?? getDefaultLogPath();
 // State file to track last read position
 const STATE_FILE = path.join(os.tmpdir(), "factorio-agent-chat-state.json");
+// Hints file - supervisor writes here, we read and clear
+const HINTS_FILE = path.join(os.tmpdir(), "factorio-agent-hints.txt");
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000;
@@ -88,6 +90,30 @@ function saveChatState(state: ChatState): void {
   } catch {
     // Ignore errors
   }
+}
+
+/**
+ * Read hints from file and clear it (so hints are only shown once)
+ */
+function readAndClearHints(): string[] {
+  const hints: string[] = [];
+
+  if (!fs.existsSync(HINTS_FILE)) {
+    return hints;
+  }
+
+  try {
+    const content = fs.readFileSync(HINTS_FILE, "utf-8").trim();
+    if (content) {
+      hints.push(...content.split("\n").filter((line) => line.trim()));
+    }
+    // Clear the file after reading
+    fs.writeFileSync(HINTS_FILE, "");
+  } catch {
+    // Ignore errors
+  }
+
+  return hints;
 }
 
 function readNewChatMessages(): ChatMessage[] {
@@ -307,6 +333,17 @@ async function main(): Promise<void> {
     const command = `/silent-command ${wrappedCode}`;
 
     const result = await executeWithRetry(rcon, command);
+
+    // Check for supervisor hints (read and clear so they only appear once)
+    const hints = readAndClearHints();
+    if (hints.length > 0) {
+      console.log("=== SUPERVISOR HINTS ===");
+      for (const hint of hints) {
+        console.log(`> ${hint}`);
+      }
+      console.log("=== END HINTS ===");
+      console.log("");
+    }
 
     // Check for new chat messages
     const chatMessages = readNewChatMessages();

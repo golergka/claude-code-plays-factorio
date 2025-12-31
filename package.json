@@ -7,6 +7,7 @@
     "eval": "tsx scripts/factorio-eval.ts",
     "eval:file": "tsx scripts/factorio-eval-file.ts",
     "say": "tsx scripts/factorio-say.ts",
+    "hint": "tsx scripts/factorio-hint.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit"
   },

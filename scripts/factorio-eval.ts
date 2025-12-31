@@ -29,6 +29,11 @@ const MAX_DISPLAY_LENGTH = parseInt(
   process.env.FACTORIO_MAX_DISPLAY_LENGTH ?? "200",
   10
 );
+// Max length for output results (0 = no limit)
+const MAX_OUTPUT_LENGTH = parseInt(
+  process.env.FACTORIO_MAX_OUTPUT_LENGTH ?? "4000",
+  10
+);
 // Path to Factorio server log for reading chat
 const FACTORIO_LOG_PATH =
   process.env.FACTORIO_LOG_PATH ?? getDefaultLogPath();
@@ -296,9 +301,14 @@ async function main(): Promise<void> {
       console.log("");
     }
 
-    // Output the command result
+    // Output the command result (truncated if too long)
     if (result) {
-      console.log(result);
+      if (MAX_OUTPUT_LENGTH > 0 && result.length > MAX_OUTPUT_LENGTH) {
+        console.log(result.substring(0, MAX_OUTPUT_LENGTH));
+        console.log(`\n... [OUTPUT TRUNCATED - ${result.length} chars total, showing first ${MAX_OUTPUT_LENGTH}]`);
+      } else {
+        console.log(result);
+      }
     }
   } catch (error) {
     if (error instanceof Error) {

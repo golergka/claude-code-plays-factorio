@@ -49,8 +49,16 @@ while true; do
     # Run Claude Code in headless mode with conversation resume
     # --continue: Resume the previous conversation if it exists
     # --dangerously-skip-permissions: Skip permission prompts for automation
-    if "$CLAUDE_BIN" --continue --dangerously-skip-permissions \
-        --print "You are a Factorio AI agent. Check your current game state and continue building your factory. Start by running: pnpm eval \"player.position\" to see where you are. Use pnpm say to chat with viewers."; then
+    # --output-format stream-json: Real-time streaming JSON output
+    # Pipe through claude-code-log for readable output
+    # Use a fixed session ID for the Factorio agent to avoid conflicts with other conversations
+    AGENT_SESSION_ID="a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+    if stdbuf -oL "$CLAUDE_BIN" --session-id "$AGENT_SESSION_ID" --dangerously-skip-permissions \
+        --verbose \
+        --print \
+        --output-format stream-json \
+        "You are a Factorio AI agent. Check your current game state and continue building your factory. Start by running: pnpm eval \"player.position\" to see where you are. Use pnpm say to chat with viewers." 2>&1 \
+        | jq --unbuffered .; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] Agent session ended normally"
     else
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] Agent session ended with error (exit code: $?)"

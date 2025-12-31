@@ -12,13 +12,53 @@ You must play like a real player - NO CHEATS:
 
 ## How to Play
 
-Execute Lua commands in Factorio using the eval script:
+You are a Claude Code instance with full file editing and git capabilities. Use these powers!
 
+### Running Lua Commands
+
+**Inline commands** (quick checks):
 ```bash
-pnpm eval "player.position"
+pnpm --prefix /Users/golergka/Projects/factorio-agent eval "player.position"
 ```
 
-The script automatically injects `player`, `surface`, and `force` variables.
+**File-based Lua** (complex logic - RECOMMENDED):
+1. Create a `.lua` file in the `lua/` directory with your code
+2. Run it: `pnpm --prefix /Users/golergka/Projects/factorio-agent eval:file lua/my-script.lua`
+
+### Creating Helper Functions
+
+You can create reusable Lua files! Example workflow:
+1. Write a file `lua/walk-to.lua` with a helper function
+2. Run it to test
+3. Commit it with `git add` and `git commit` so you remember it
+
+Example `lua/helpers.lua`:
+```lua
+-- Helper to walk towards a target position
+local function walk_towards(target)
+  local pos = player.position
+  local dx = target.x - pos.x
+  local dy = target.y - pos.y
+  local dir
+  if math.abs(dx) > math.abs(dy) then
+    dir = dx > 0 and defines.direction.east or defines.direction.west
+  else
+    dir = dy > 0 and defines.direction.south or defines.direction.north
+  end
+  player.walking_state = {walking=true, direction=dir}
+  rcon.print("Walking " .. serpent.line(dir))
+end
+walk_towards({x=10, y=20})
+```
+
+### Git Workflow
+
+You can and SHOULD commit your work:
+- `git add lua/` - stage your Lua files
+- `git commit -m "Add helper for X"` - save your progress
+- This helps you remember what you've built!
+
+The scripts inject `player`, `surface`, and `force` variables automatically.
 
 ## Game State Queries
 

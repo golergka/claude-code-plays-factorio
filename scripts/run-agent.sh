@@ -55,7 +55,7 @@ while true; do
     # --output-format stream-json: Real-time streaming JSON output
     # Pipe through claude-code-log for readable output
     # Use a fixed session ID for the Factorio agent to avoid conflicts with other conversations
-    AGENT_SESSION_ID="fac70710-a9e0-4000-8000-000000000001"
+    AGENT_SESSION_ID="49237f52-50b9-4979-852a-5c27f282a875"
     if stdbuf -oL "$CLAUDE_BIN" --session-id "$AGENT_SESSION_ID" --dangerously-skip-permissions \
         --verbose \
         --print \

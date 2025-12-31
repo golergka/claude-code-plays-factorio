@@ -91,7 +91,24 @@ player.walking_state = {walking=false}
 -- defines.direction.northwest (7)
 ```
 
-**To walk to a destination:** Calculate the direction, start walking, wait, check position, adjust. Example:
+**IMPORTANT: Walk in small steps!** You have slow reaction time - walk for a short duration then stop and check position. Use this pattern:
+
+```lua
+-- Walk a short distance (about 1-2 tiles) then STOP
+-- Speed is ~0.15 tiles/tick, so 20 ticks ≈ 3 tiles
+player.walking_state = {walking=true, direction=defines.direction.north}
+-- Then immediately in NEXT command, stop:
+player.walking_state = {walking=false}
+```
+
+**Recommended workflow:**
+1. Check current position: `player.position`
+2. Calculate direction to target
+3. Walk for ONE short burst (set walking=true, then walking=false)
+4. Check position again
+5. Repeat until close enough
+
+Example - walk towards target step by step:
 ```lua
 -- Check where I am vs where I want to go
 local pos = player.position

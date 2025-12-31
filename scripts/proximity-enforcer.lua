@@ -4,6 +4,9 @@
 
 local REACH_DISTANCE = 10
 
+-- Forward declaration for unwrap_entity (defined later)
+local unwrap_entity
+
 -- Block teleportation by wrapping the player object
 local real_player = player
 player = setmetatable({}, {
@@ -14,6 +17,13 @@ player = setmetatable({}, {
                 rcon.print(msg)
                 game.print("[color=red][BLOCKED][/color] " .. msg)
                 error(msg)
+            end
+        end
+        -- Wrap mine_entity to unwrap proxy entities
+        if k == "mine_entity" then
+            return function(entity, ...)
+                local real_entity = unwrap_entity(entity)
+                return real_player.mine_entity(real_entity, ...)
             end
         end
         return real_player[k]
@@ -31,11 +41,23 @@ local function get_distance(entity)
     return math.sqrt(dx*dx + dy*dy)
 end
 
+-- Store real entities so we can unwrap proxies
+local proxy_to_real = {}
+
+-- Unwrap a proxy to get the real entity (assigns to forward declaration)
+unwrap_entity = function(proxy_or_entity)
+    if proxy_or_entity and proxy_to_real[proxy_or_entity] then
+        return proxy_to_real[proxy_or_entity]
+    end
+    return proxy_or_entity
+end
+
 -- Create a proxy wrapper around an entity that enforces proximity
 local function create_entity_proxy(entity)
     if not entity or not entity.valid then return entity end
 
     local proxy = {}
+    proxy_to_real[proxy] = entity  -- Store mapping for unwrapping
     setmetatable(proxy, {
         __index = function(t, k)
             local original = entity[k]

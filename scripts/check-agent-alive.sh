@@ -1,21 +1,15 @@
 #!/bin/bash
-# Quick check if agent is alive. Returns:
-# - "alive:PID" if agent is running
-# - "dead" if agent is not running
-# Exit code: 0 if alive, 1 if dead
+# Check if a child agent is running
+# Returns: "alive:PID" or "dead"
+# Exit: 0 if alive, 1 if dead
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-LOCK_PID_FILE="$PROJECT_DIR/.agent.lock.d/pid"
+# Find Claude processes in agent-workspace
+AGENT_PID=$(lsof 2>/dev/null | grep "claude" | grep "agent-workspace" | awk '{print $2}' | sort -u | head -1)
 
-# Check if lock file exists and contains a valid PID
-if [ -f "$LOCK_PID_FILE" ]; then
-    PID=$(cat "$LOCK_PID_FILE" 2>/dev/null)
-    if [ -n "$PID" ] && kill -0 "$PID" 2>/dev/null; then
-        echo "alive:$PID"
-        exit 0
-    fi
+if [ -n "$AGENT_PID" ]; then
+    echo "alive:$AGENT_PID"
+    exit 0
+else
+    echo "dead"
+    exit 1
 fi
-
-echo "dead"
-exit 1

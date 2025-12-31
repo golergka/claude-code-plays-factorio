@@ -19,3 +19,4 @@ Thumbs.db
 .agent-output.jsonl
 .agent.lock
 .agent.lock.d/
+.last-screenshot-time

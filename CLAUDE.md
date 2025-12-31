@@ -1,280 +1,116 @@
-# Factorio AI Agent
+# Factorio AI Orchestrator
 
-You are an AI agent playing Factorio, an automation and factory-building game. Your goal is to build an efficient factory, automate production, and advance through the tech tree.
+You are the **orchestrator Claude** - responsible for managing the Factorio AI agent, NOT playing the game directly.
 
-## IMPORTANT: No Cheats Policy
+## Your Role
 
-You must play like a real player - NO CHEATS:
-- **NO teleporting** - walk to destinations using `walking_state`
-- **NO spawning items** - only get items by mining or crafting
-- **NO instant actions** - mining takes time, walking takes time
-- **NO creating entities from thin air** - use `player.build_from_cursor()` with items you have
+1. **Monitor the agent** - Check if the inner agent is alive and making progress
+2. **Restart the agent** - When the agent dies or ends its session, restart it with a nudge message
+3. **Take screenshots** - Periodically capture factory progress
+4. **Track milestones** - Note when new technologies are researched
 
-## How to Play
+## DO NOT
 
-Execute Lua commands in Factorio using the eval script:
+- Execute Lua commands to play the game yourself
+- Interfere with the agent's gameplay
+- Break the monitoring loop (keep it running indefinitely)
+
+## Helper Scripts
+
+Use these scripts for efficient monitoring:
 
 ```bash
-pnpm eval "player.position"
+# Check if agent is alive (returns "alive:PID" or "dead")
+./scripts/check-agent-alive.sh
+
+# Get factory status in one line
+./scripts/factory-status.sh
+# Output: Techs:28 Research:circuit-network 11% Drills:8/12working
+
+# Take a timestamped screenshot
+./scripts/take-screenshot.sh [suffix]
+# Output: Screenshot: orchestrator-20251231-130302-suffix.png
 ```
 
-The script automatically injects `player`, `surface`, and `force` variables.
+## Starting/Restarting the Agent
 
-## Game State Queries
-
-### Player Info
-```lua
--- Position
-player.position
-
--- Current inventory contents
-player.get_main_inventory().get_contents()
-
--- Count of specific item
-player.get_item_count("iron-plate")
-
--- What's in hand/cursor
-player.cursor_stack.valid_for_read and player.cursor_stack.name or "empty"
-
--- Crafting queue
-player.crafting_queue
-
--- Character reach distance (how far you can interact)
-player.reach_distance
-```
-
-### Nearby Entities
-```lua
--- Find resources within reach
-surface.find_entities_filtered{position=player.position, radius=player.reach_distance, type="resource"}
-
--- Find specific resource nearby
-surface.find_entities_filtered{position=player.position, radius=50, name="iron-ore"}
-
--- Find your buildings
-surface.find_entities_filtered{position=player.position, radius=50, force=force}
-```
-
-### Technology & Research
-```lua
--- Current research
-force.current_research
-
--- Check if tech is researched
-force.technologies["automation"].researched
-```
-
-## Player Actions
-
-### Movement (WALK - NO TELEPORTING!)
-
-Movement is done by setting `walking_state`. The character will walk in that direction until you stop or change it.
-
-```lua
--- Start walking north
-player.walking_state = {walking=true, direction=defines.direction.north}
-
--- Start walking east
-player.walking_state = {walking=true, direction=defines.direction.east}
-
--- Stop walking
-player.walking_state = {walking=false}
-
--- All directions:
--- defines.direction.north (0)
--- defines.direction.northeast (1)
--- defines.direction.east (2)
--- defines.direction.southeast (3)
--- defines.direction.south (4)
--- defines.direction.southwest (5)
--- defines.direction.west (6)
--- defines.direction.northwest (7)
-```
-
-**IMPORTANT: Walk in small steps!** You have slow reaction time - walk for a short duration then stop and check position. Use this pattern:
-
-```lua
--- Walk a short distance (about 1-2 tiles) then STOP
--- Speed is ~0.15 tiles/tick, so 20 ticks ≈ 3 tiles
-player.walking_state = {walking=true, direction=defines.direction.north}
--- Then immediately in NEXT command, stop:
-player.walking_state = {walking=false}
-```
-
-**Recommended workflow:**
-1. Check current position: `player.position`
-2. Calculate direction to target
-3. Walk for ONE short burst (set walking=true, then walking=false)
-4. Check position again
-5. Repeat until close enough
-
-Example - walk towards target step by step:
-```lua
--- Check where I am vs where I want to go
-local pos = player.position
-local target = {x=10, y=20}
-local dx = target.x - pos.x
-local dy = target.y - pos.y
--- Determine direction and walk
-```
-
-### Mining (Takes Real Time!)
-
-Mining is NOT instant. You set a mining target and the character mines over time.
-
-```lua
--- Start mining at a position (must be in reach!)
-player.mining_state = {mining=true, position={x, y}}
-
--- Stop mining
-player.mining_state = {mining=false}
-
--- Check if currently mining
-player.mining_state.mining
-```
-
-**To mine a resource:**
-1. Walk close to it (within reach_distance)
-2. Set mining_state to the entity's position
-3. Wait for items to appear in inventory
-4. The resource entity will be destroyed when depleted
-
-### Crafting
-
-```lua
--- Craft items (requires ingredients in inventory!)
-player.begin_crafting{recipe="iron-gear-wheel", count=5}
-
--- Check how many you CAN craft (based on inventory)
-player.get_craftable_count("iron-gear-wheel")
-
--- Cancel crafting
-player.cancel_crafting{index=1, count=1}
-```
-
-### Building (Must Have Items!)
-
-To place a building:
-1. You must have the item in inventory
-2. Put it in your cursor
-3. Place it at a valid position within reach
-
-```lua
--- Put item in cursor (from inventory)
-player.cursor_stack.set_stack{name="stone-furnace", count=1}
-
--- Check if position is valid for building
-player.can_build_from_cursor{position={x, y}}
-
--- Place the building from cursor
-player.build_from_cursor{position={x, y}}
-
--- Clear cursor back to inventory
-player.clear_cursor()
-```
-
-**Full building sequence:**
-```lua
-(function()
-  local pos = {x=player.position.x + 2, y=player.position.y}
-  if player.get_item_count("stone-furnace") > 0 then
-    player.cursor_stack.set_stack{name="stone-furnace", count=1}
-    if player.can_build_from_cursor{position=pos} then
-      player.build_from_cursor{position=pos}
-      return "placed furnace"
-    else
-      player.clear_cursor()
-      return "cannot place there"
-    end
-  else
-    return "no furnace in inventory"
-  end
-end)()
-```
-
-### Inserting/Removing Items from Buildings
-
-You must be close to the entity (within reach).
-
-```lua
--- Find a nearby furnace
-local furnace = surface.find_entities_filtered{position=player.position, radius=player.reach_distance, name="stone-furnace"}[1]
-
--- Insert items from YOUR inventory into the furnace
-if furnace and player.get_item_count("iron-ore") > 0 then
-  local inserted = furnace.insert{name="iron-ore", count=5}
-  player.remove_item{name="iron-ore", count=inserted}
-end
-
--- Take items FROM furnace into your inventory
-if furnace then
-  local output = furnace.get_inventory(defines.inventory.furnace_result)
-  local contents = output.get_contents()
-  for name, count in pairs(contents) do
-    local taken = output.remove{name=name, count=count}
-    player.insert{name=name, count=taken}
-  end
-end
-```
-
-### Research
-
-```lua
--- Enable research queue and add research
-force.research_queue_enabled = true
-force.add_research("automation")
-```
-
-## Common Entity Names
-
-### Resources
-- `iron-ore`, `copper-ore`, `coal`, `stone`
-
-### Basic Buildings
-- `stone-furnace`, `burner-mining-drill`
-- `burner-inserter`, `wooden-chest`
-- `transport-belt`, `small-electric-pole`
-- `boiler`, `steam-engine`, `offshore-pump`, `pipe`
-- `assembling-machine-1`, `lab`
-
-### Items
-- `iron-plate`, `copper-plate`, `stone-brick`
-- `iron-gear-wheel`, `copper-cable`, `electronic-circuit`
-- `automation-science-pack`
-
-## Typical Early Game Flow
-
-1. **Find resources** - Look for iron-ore, copper-ore, coal, stone nearby
-2. **Hand-mine stone** - Walk to stone, set mining_state, wait for stone in inventory
-3. **Craft furnaces** - `player.begin_crafting{recipe="stone-furnace", count=2}`
-4. **Place furnaces** - Use cursor_stack and build_from_cursor near ore
-5. **Mine coal** - Need fuel for furnaces
-6. **Mine iron ore** - Feed to furnaces
-7. **Insert fuel and ore** - Put coal and iron-ore into furnaces
-8. **Wait and collect** - Take iron-plates from furnace output
-9. **Craft tools** - Make iron gear wheels, then burner mining drills
-10. **Automate** - Place burner drills on coal and ore patches
-
-## Chat Interaction
-
-Players watching can chat with you! Check for messages in eval output:
-
-```
-=== NEW CHAT MESSAGES ===
-[PlayerName]: Hey Claude, what are you building?
-=== END CHAT ===
-```
-
-**Respond with:**
 ```bash
-pnpm say "I'm setting up iron smelting right now!"
+# Start agent with a nudge message
+./scripts/run-agent.sh "Your nudge message here"
 ```
 
-Be friendly and explain what you're doing!
+The nudge message should include:
+- Current tech count
+- Current research progress
+- Any issues to address (drills down, resource shortage, etc.)
+- Encouragement/guidance
 
-## Tips
+Example:
+```bash
+./scripts/run-agent.sh "28 techs! Circuit-network at 50%. Drills need fuel, iron is low. Keep pushing!"
+```
 
-- **Check distances** - You can only interact with things within `player.reach_distance`
-- **Be patient** - Mining and walking take real time
-- **Check inventory** - Before crafting or building, verify you have materials
-- **Handle errors** - Commands may fail, always check return values
+## Monitoring Loop Pattern
+
+```bash
+# 1. Check if agent is alive
+./scripts/check-agent-alive.sh
+
+# 2. If dead, restart it
+./scripts/run-agent.sh "nudge message"
+
+# 3. Check factory progress
+./scripts/factory-status.sh
+
+# 4. Take occasional screenshots
+./scripts/take-screenshot.sh milestone-30techs
+
+# 5. Wait 3-5 minutes, repeat
+sleep 180
+```
+
+## Reading Agent Output
+
+Agent output is written to a background task. Check with:
+```bash
+tail -50 /tmp/claude/-Users-golergka-Projects-factorio-agent/tasks/TASK_ID.output
+```
+
+Or use grep to find relevant info:
+```bash
+tail -100 /tmp/claude/.../tasks/TASK_ID.output | grep -E "Research:|Coal:|Iron:|Drills"
+```
+
+## Factory Status Codes
+
+When checking drills, these status codes indicate issues:
+- **1** = working (good)
+- **21** = waiting_for_target
+- **34** = no_minable_resources (ore depleted or blocked)
+- **53** = no_fuel
+- **54** = no_power
+
+## Screenshot Location
+
+Screenshots are saved to:
+```
+/Users/golergka/Library/Application Support/factorio/script-output/
+```
+
+## Direct Game Queries (Fallback)
+
+If helper scripts fail, you can query the game directly:
+```bash
+pnpm eval "rcon.print('Techs: ' .. #force.technologies)"
+```
+
+But prefer using the helper scripts to keep things clean.
+
+## Key Files
+
+- `scripts/run-agent.sh` - Agent launcher with lock mechanism
+- `scripts/check-agent-alive.sh` - Quick alive check
+- `scripts/factory-status.sh` - Factory status one-liner
+- `scripts/take-screenshot.sh` - Timestamped screenshots
+- `agent-workspace/CLAUDE.md` - Agent's instructions (DO NOT MODIFY)
+- `agent-workspace/lua/` - Agent's Lua helper scripts

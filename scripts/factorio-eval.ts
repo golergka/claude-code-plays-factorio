@@ -41,6 +41,13 @@ const FACTORIO_LOG_PATH =
 const STATE_FILE = path.join(os.tmpdir(), "factorio-agent-chat-state.json");
 // Hints file - supervisor writes here, we read and clear
 const HINTS_FILE = path.join(os.tmpdir(), "factorio-agent-hints.txt");
+// Proximity enforcement - if true, entity interactions require being close
+const ENFORCE_PROXIMITY = process.env.FACTORIO_ENFORCE_PROXIMITY !== "false";
+// Proximity enforcer Lua code
+const PROXIMITY_ENFORCER_PATH = path.join(
+  path.dirname(new URL(import.meta.url).pathname),
+  "proximity-enforcer.lua"
+);
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000;
@@ -231,6 +238,42 @@ function truncateOutput(output: string): string {
   });
 }
 
+// Load proximity enforcer code
+function loadProximityEnforcer(): string {
+  if (!ENFORCE_PROXIMITY) return "";
+  try {
+    return fs.readFileSync(PROXIMITY_ENFORCER_PATH, "utf-8");
+  } catch {
+    console.error("Warning: Could not load proximity enforcer");
+    return "";
+  }
+}
+
+// Check for dangerous patterns that bypass proximity enforcement
+function checkForDangerousPatterns(code: string): string | null {
+  if (!ENFORCE_PROXIMITY) return null;
+
+  // Patterns that indicate direct inventory manipulation without proximity check
+  const dangerousPatterns = [
+    // Direct get_inventory followed by insert/remove
+    /\.get_inventory\s*\([^)]*\)\s*\.\s*(insert|remove)/,
+    // Direct inventory access on found entities without using safe_ functions
+    /find_entities_filtered[^;]*\]\s*\.\s*get_inventory/,
+    // Labs array direct access
+    /labs\s*\[\s*\d+\s*\]\s*\.\s*get_inventory/,
+    // Any entity array direct inventory access
+    /\[\s*\d+\s*\]\s*\.\s*get_inventory\s*\([^)]*\)\s*\.\s*(insert|remove)/,
+  ];
+
+  for (const pattern of dangerousPatterns) {
+    if (pattern.test(code)) {
+      return `BLOCKED: Direct entity inventory access detected. You MUST use safe_insert(), safe_take(), or find_reachable() functions. These functions check proximity and require you to WALK to entities first. Pattern matched: ${pattern.source}`;
+    }
+  }
+
+  return null;
+}
+
 function wrapLuaCode(code: string): string {
   const playerAccessor = getPlayerAccessor();
 
@@ -241,6 +284,14 @@ function wrapLuaCode(code: string): string {
   let playerSetup = "";
   if (needsPlayer) {
     playerSetup = `local player = ${playerAccessor}; if not player then rcon.print("ERROR: No player connected yet. Connect to the server first."); return end; local surface = player.surface; local force = player.force; `;
+
+    // Inject proximity enforcement if enabled
+    if (ENFORCE_PROXIMITY) {
+      const enforcer = loadProximityEnforcer();
+      if (enforcer) {
+        playerSetup += enforcer + " ";
+      }
+    }
   }
 
   // Optionally show the command in game chat (for streaming)
@@ -329,6 +380,19 @@ async function main(): Promise<void> {
   });
 
   try {
+    // Check for dangerous patterns that bypass proximity enforcement
+    const dangerousPattern = checkForDangerousPatterns(luaCode);
+    if (dangerousPattern) {
+      console.log(dangerousPattern);
+      console.log("");
+      console.log("Use these safe functions instead:");
+      console.log("  - safe_insert(entity, items) - inserts items if entity is in reach");
+      console.log("  - safe_take(entity, items) - takes items if entity is in reach");
+      console.log("  - find_reachable(filter) - returns only entities within reach");
+      console.log("  - check_proximity(entity, action) - returns true if entity is close enough");
+      process.exit(1);
+    }
+
     const wrappedCode = wrapLuaCode(luaCode);
     const command = `/silent-command ${wrappedCode}`;
 

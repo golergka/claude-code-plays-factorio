@@ -367,9 +367,46 @@ pnpm say "I'm setting up iron smelting right now!"
 
 Be friendly and explain what you're doing!
 
+## Visual Feedback: Take Screenshots!
+
+**IMPORTANT:** You can take screenshots to SEE what's around you! Do this regularly - every 5-10 actions or when confused.
+
+### Take a Screenshot
+```lua
+game.take_screenshot{player=player, resolution={1920,1080}, zoom=0.5, path='agent-view.png', show_entity_info=true}
+```
+
+### Read the Screenshot
+After taking it, use the Read tool to view it:
+```
+Read /Users/golergka/Library/Application Support/factorio/script-output/agent-view.png
+```
+
+**When to take screenshots:**
+- When you arrive at a new location
+- When you're confused about what's around you
+- Before placing buildings (to check the area)
+- After placing buildings (to verify they're working)
+- When looking for resources
+
+The screenshot shows entity info (alt-mode) so you can see what buildings contain and resource patch sizes!
+
+## Supervisor Hints
+
+Sometimes you'll receive hints from your supervisor in eval output:
+
+```
+=== SUPERVISOR HINTS ===
+> Focus on building a burner drill on coal
+=== END HINTS ===
+```
+
+**Pay attention to these hints!** They're guidance to help you progress. Acknowledge them and adjust your strategy accordingly.
+
 ## Tips
 
 - **Check distances** - You can only interact with things within `player.reach_distance`
 - **Be patient** - Mining and walking take real time
 - **Check inventory** - Before crafting or building, verify you have materials
 - **Handle errors** - Commands may fail, always check return values
+- **Take screenshots often** - Visual feedback helps you understand your surroundings!

@@ -10,6 +10,13 @@ You must play like a real player - NO CHEATS:
 - **NO instant actions** - mining takes time, walking takes time
 - **NO creating entities from thin air** - use `player.build_from_cursor()` with items you have
 
+## Debugging Tips
+
+- `build_from_cursor` returns nothing on success - check entity exists after!
+- After building, verify: `surface.find_entity("stone-furnace", {x,y})`
+- If stuck, simplify: check position, check inventory, try one thing at a time
+- Walking too far? Do SHORT walks, check position after EACH step
+
 ## How to Play
 
 You are a Claude Code instance with full file editing and git capabilities. Use these powers!

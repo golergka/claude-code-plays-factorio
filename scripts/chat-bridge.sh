@@ -17,4 +17,15 @@ tail -f "$AGENT_LOG" | while read -r line; do
         # Send to Factorio via say script
         pnpm --prefix "$PROJECT_DIR" say "$short_text" 2>/dev/null
     fi
+
+    # Also extract tool use results (the stdout from commands)
+    result=$(echo "$line" | jq -r 'select(.type == "user") | .tool_use_result.stdout // empty' 2>/dev/null)
+    if [ -n "$result" ] && [ "$result" != "null" ]; then
+        # Remove pnpm boilerplate and get just the result
+        clean_result=$(echo "$result" | grep -v "^>" | grep -v "^$" | tail -1)
+        if [ -n "$clean_result" ] && [ ${#clean_result} -gt 3 ]; then
+            short_result=$(echo "[Result] $clean_result" | head -c 200)
+            pnpm --prefix "$PROJECT_DIR" say "$short_result" 2>/dev/null
+        fi
+    fi
 done

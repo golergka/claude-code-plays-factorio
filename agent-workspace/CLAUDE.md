@@ -9,6 +9,42 @@ You must play like a real player - NO CHEATS:
 - **NO spawning items** - only get items by mining or crafting
 - **NO instant actions** - mining takes time, walking takes time
 - **NO creating entities from thin air** - use `player.build_from_cursor()` with items you have
+- **NO interacting with far away entities** - use safe wrappers that enforce proximity!
+
+## REQUIRED: Use Safe Interaction Wrappers!
+
+**CRITICAL:** Always use the safe interaction helpers to prevent cheating. They enforce proximity checks and will fail if you're too far from an entity.
+
+Load them at the start of any script:
+```lua
+dofile("/Users/golergka/Projects/factorio-agent/agent-workspace/lua/safe-interact.lua")
+```
+
+Available safe functions:
+- `safe_insert(entity, {name="coal", count=10})` - Insert items (fails if too far)
+- `safe_take(entity, defines.inventory.furnace_result)` - Take items (fails if too far)
+- `safe_build("stone-furnace", {x=10, y=20})` - Build (fails if too far)
+- `safe_mine(entity)` - Mine entity (fails if too far)
+- `find_nearest("stone-furnace", 50)` - Find nearest entity of type, returns distance
+
+**Example workflow:**
+```lua
+dofile("/Users/golergka/Projects/factorio-agent/agent-workspace/lua/safe-interact.lua")
+
+-- Find nearest furnace
+local furnace, msg = find_nearest("stone-furnace", 50)
+rcon.print(msg)
+
+if furnace then
+    local result, err = safe_insert(furnace, {name="coal", count=5})
+    if not result then
+        rcon.print("BLOCKED: " .. err)  -- Will say "too far - walk closer first!"
+        -- You need to WALK to the furnace before interacting!
+    end
+end
+```
+
+**If an action fails due to distance, WALK to the entity first!**
 
 ## META: Build Helpers, Don't Repeat Yourself!
 
@@ -419,6 +455,25 @@ Sometimes you'll receive hints from your supervisor in eval output:
 
 Your `lua/` directory contains helper scripts. Use them!
 
+- `safe-interact.lua` - **REQUIRED** - Load this first! Provides proximity-enforced interactions
 - `diagnose-and-fix-drills.lua` - Check drill status and attempt fixes
 - `production-loop.lua` - Run production maintenance cycle
 - `walk-to-target.lua` - Walk towards coordinates (edit TARGET_X/Y first)
+
+## pnpm Commands (from project root)
+
+Run these from `/Users/golergka/Projects/factorio-agent`:
+
+```bash
+# Execute Lua code
+pnpm --prefix /Users/golergka/Projects/factorio-agent eval "player.position"
+
+# Execute Lua file
+pnpm --prefix /Users/golergka/Projects/factorio-agent eval:file path/to/file.lua
+
+# Say something in game chat
+pnpm --prefix /Users/golergka/Projects/factorio-agent say "Hello!"
+
+# Get OpenAI vision analysis of current state (helpful for strategic decisions!)
+pnpm --prefix /Users/golergka/Projects/factorio-agent analyze
+```

@@ -15,22 +15,32 @@ You are the **orchestrator Claude** - responsible for managing the Factorio AI a
 - Interfere with the agent's gameplay
 - Break the monitoring loop (keep it running indefinitely)
 
-## Helper Scripts
+## Helper Scripts & Commands
 
-Use these scripts for efficient monitoring:
+Use pnpm commands for efficiency:
 
 ```bash
-# Check if agent is alive (returns "alive:PID" or "dead")
-./scripts/check-agent-alive.sh
+# Check if agent is alive
+pnpm agent:status
 
 # Get factory status in one line
-./scripts/factory-status.sh
-# Output: Techs:28 Research:circuit-network 11% Drills:8/12working
+pnpm factory:status
 
 # Take a timestamped screenshot
-./scripts/take-screenshot.sh [suffix]
-# Output: Screenshot: orchestrator-20251231-130302-suffix.png
+pnpm screenshot [suffix]
+
+# Analyze screenshot with OpenAI Vision (strategic hints!)
+pnpm analyze
+
+# Start the chat bridge (for Twitch chat integration)
+pnpm chat:bridge
 ```
+
+You can also use the bash scripts directly:
+- `./scripts/check-agent-alive.sh` - returns "alive:PID" or "dead"
+- `./scripts/factory-status.sh` - one-liner status
+- `./scripts/take-screenshot.sh [suffix]` - timestamped screenshot
+- `./scripts/analyze-screenshot.ts` - OpenAI vision analysis
 
 ## Starting/Restarting the Agent
 

@@ -29,9 +29,9 @@ const MAX_DISPLAY_LENGTH = parseInt(
   process.env.FACTORIO_MAX_DISPLAY_LENGTH ?? "200",
   10
 );
-// Max length for output results (0 = no limit)
-const MAX_OUTPUT_LENGTH = parseInt(
-  process.env.FACTORIO_MAX_OUTPUT_LENGTH ?? "4000",
+// Max length for string values in output (0 = no limit)
+const MAX_STRING_LENGTH = parseInt(
+  process.env.FACTORIO_MAX_STRING_LENGTH ?? "500",
   10
 );
 // Path to Factorio server log for reading chat
@@ -185,6 +185,26 @@ function truncateCode(code: string): string {
   return code;
 }
 
+/**
+ * Truncate long string values in output.
+ * Works with Lua serpent.line() output format (strings are "quoted").
+ */
+function truncateOutput(output: string): string {
+  if (!output || MAX_STRING_LENGTH <= 0) return output;
+
+  // Find quoted strings and truncate if too long
+  // Matches "string content" while handling escaped quotes
+  return output.replace(/"([^"\\]|\\.)*"/g, (match) => {
+    // Remove quotes to get actual length
+    const content = match.slice(1, -1);
+    if (content.length > MAX_STRING_LENGTH) {
+      const truncated = content.substring(0, MAX_STRING_LENGTH);
+      return `"${truncated}..."`;
+    }
+    return match;
+  });
+}
+
 function wrapLuaCode(code: string): string {
   const playerAccessor = getPlayerAccessor();
 
@@ -303,12 +323,8 @@ async function main(): Promise<void> {
 
     // Output the command result (truncated if too long)
     if (result) {
-      if (MAX_OUTPUT_LENGTH > 0 && result.length > MAX_OUTPUT_LENGTH) {
-        console.log(result.substring(0, MAX_OUTPUT_LENGTH));
-        console.log(`\n... [OUTPUT TRUNCATED - ${result.length} chars total, showing first ${MAX_OUTPUT_LENGTH}]`);
-      } else {
-        console.log(result);
-      }
+      const truncated = truncateOutput(result);
+      console.log(truncated);
     }
   } catch (error) {
     if (error instanceof Error) {

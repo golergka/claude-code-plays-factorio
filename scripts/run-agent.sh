@@ -57,7 +57,7 @@ while true; do
         --verbose \
         --print \
         --output-format stream-json \
-        "You are a Factorio AI agent. Check your current game state and continue building your factory. Start by running: pnpm eval \"player.position\" to see where you are. Use pnpm say to chat with viewers." 2>&1 \
+        "You are a Factorio AI agent. Check your current game state and continue building your factory. Start by running: pnpm eval \"player.position\" to see where you are. Use pnpm say to chat with viewers." \
         | jq --unbuffered .; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] Agent session ended normally"
     else

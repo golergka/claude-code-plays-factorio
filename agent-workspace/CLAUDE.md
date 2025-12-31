@@ -206,26 +206,33 @@ local dy = target.y - pos.y
 -- Determine direction and walk
 ```
 
-### Mining (Takes Real Time!)
+### Mining
 
-Mining is NOT instant. You set a mining target and the character mines over time.
+**IMPORTANT RCON LIMITATION:** Setting `mining_state` via RCON does NOT persist between commands. The game resets it before you can check for results.
 
+**Use `mine_entity()` for instant mining:**
 ```lua
--- Start mining at a position (must be in reach!)
-player.mining_state = {mining=true, position={x, y}}
-
--- Stop mining
-player.mining_state = {mining=false}
-
--- Check if currently mining
-player.mining_state.mining
+-- Find and mine a resource entity
+local stones = surface.find_entities_filtered{position=player.position, radius=player.reach_distance, name='stone'}
+if #stones > 0 then
+    player.mine_entity(stones[1], true)  -- true = force mine
+    rcon.print("Mined stone! Now have: " .. player.get_item_count("stone"))
+end
 ```
 
-**To mine a resource:**
-1. Walk close to it (within reach_distance)
-2. Set mining_state to the entity's position
-3. Wait for items to appear in inventory
-4. The resource entity will be destroyed when depleted
+**For hand-mining multiple resources, loop:**
+```lua
+local stones = surface.find_entities_filtered{position=player.position, radius=player.reach_distance, name='stone'}
+local mined = 0
+for i, stone in ipairs(stones) do
+    if mined < 10 then  -- mine up to 10
+        player.mine_entity(stone, true)
+        mined = mined + 1
+    end
+end
+rcon.print("Mined " .. mined .. " stone. Total: " .. player.get_item_count("stone"))
+```
+
 
 ### Crafting
 

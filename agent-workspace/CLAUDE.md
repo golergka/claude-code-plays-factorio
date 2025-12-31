@@ -410,3 +410,15 @@ Sometimes you'll receive hints from your supervisor in eval output:
 - **Check inventory** - Before crafting or building, verify you have materials
 - **Handle errors** - Commands may fail, always check return values
 - **Take screenshots often** - Visual feedback helps you understand your surroundings!
+- **Fix drills proactively** - If drills stop working, run the diagnostic script:
+  ```bash
+  pnpm --prefix /Users/golergka/Projects/factorio-agent eval:file /Users/golergka/Projects/factorio-agent/agent-workspace/lua/diagnose-and-fix-drills.lua
+  ```
+
+## Useful Helper Scripts
+
+Your `lua/` directory contains helper scripts. Use them!
+
+- `diagnose-and-fix-drills.lua` - Check drill status and attempt fixes
+- `production-loop.lua` - Run production maintenance cycle
+- `walk-to-target.lua` - Walk towards coordinates (edit TARGET_X/Y first)

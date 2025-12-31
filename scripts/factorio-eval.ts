@@ -22,6 +22,10 @@ const RCON_PORT = parseInt(process.env.FACTORIO_RCON_PORT ?? "27015", 10);
 const RCON_PASSWORD = process.env.FACTORIO_RCON_PASSWORD ?? "";
 // Player name or index for multiplayer - defaults to player index 1
 const PLAYER_TARGET = process.env.FACTORIO_PLAYER ?? "1";
+// Show commands in game chat for streaming
+const SHOW_COMMANDS = process.env.FACTORIO_SHOW_COMMANDS === "true";
+// Max length for displayed commands (0 = no limit)
+const MAX_DISPLAY_LENGTH = parseInt(process.env.FACTORIO_MAX_DISPLAY_LENGTH ?? "200", 10);
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_MS = 1000;
@@ -47,6 +51,21 @@ function getPlayerAccessor(): string {
   return `game.players["${PLAYER_TARGET}"]`;
 }
 
+function escapeForLua(str: string): string {
+  return str
+    .replace(/\\/g, "\\\\")
+    .replace(/"/g, '\\"')
+    .replace(/\n/g, "\\n")
+    .replace(/\r/g, "\\r");
+}
+
+function truncateCode(code: string): string {
+  if (MAX_DISPLAY_LENGTH > 0 && code.length > MAX_DISPLAY_LENGTH) {
+    return code.substring(0, MAX_DISPLAY_LENGTH) + "...";
+  }
+  return code;
+}
+
 function wrapLuaCode(code: string): string {
   const playerAccessor = getPlayerAccessor();
 
@@ -54,14 +73,22 @@ function wrapLuaCode(code: string): string {
   // This allows code to use 'player' instead of 'game.player'
   const playerSetup = `local player = ${playerAccessor}; local surface = player.surface; local force = player.force; `;
 
-  // If the code already uses rcon.print, just inject player variable
+  // Optionally show the command in game chat (for streaming)
+  let displayCode = "";
+  if (SHOW_COMMANDS) {
+    const escapedCode = escapeForLua(truncateCode(code));
+    // Use game.print with a robot emoji and colored text
+    displayCode = `game.print("[color=0.5,0.8,1][AI][/color] ${escapedCode}"); `;
+  }
+
+  // If the code already uses rcon.print, just inject player variable and display
   if (code.includes("rcon.print")) {
-    return playerSetup + code;
+    return playerSetup + displayCode + code;
   }
 
   // Wrap the code to return its result via rcon.print with serpent serialization
   // We use serpent.line for compact, parseable output
-  return `${playerSetup}rcon.print(serpent.line((function() return ${code} end)()))`;
+  return `${playerSetup}${displayCode}rcon.print(serpent.line((function() return ${code} end)()))`;
 }
 
 async function executeWithRetry(

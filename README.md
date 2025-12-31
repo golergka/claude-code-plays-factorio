@@ -53,9 +53,47 @@ pnpm eval "player.position"
 # Should output something like: {x = 0, y = 0}
 ```
 
-## Watching the Agent Play
+## Streaming Setup (Twitch/YouTube)
 
-You can connect to the server as a second player to observe the AI agent:
+Perfect for running an autonomous AI stream!
+
+### Setup
+
+1. **Start the headless server** with RCON enabled
+2. **Launch Factorio client** and connect via multiplayer (Direct Connect → `localhost`)
+3. **Follow the agent's character**: Type `/follow 1` in game chat (or the agent's player name)
+4. **Enable command display** in `.env`:
+   ```
+   FACTORIO_SHOW_COMMANDS=true
+   ```
+5. **Start OBS** and capture the Factorio window
+6. **Run the agent**: `./scripts/run-agent.sh`
+
+### What Viewers Will See
+
+- The game camera following the AI-controlled character
+- Every command the AI executes appears in the game chat with `[AI]` prefix
+- The agent mining, building, crafting, and expanding the factory
+
+### Camera Lock
+
+Use `/follow <player>` to lock your camera to the agent:
+```
+/follow 1
+```
+
+To stop following: `/follow` (no argument)
+
+### Tips for Streaming
+
+- Create a fresh save in peaceful mode for smoother gameplay
+- Set `FACTORIO_MAX_DISPLAY_LENGTH=100` for shorter chat messages
+- Consider adding a "Now Playing: AI Factory" overlay in OBS
+- The agent runs indefinitely - perfect for 24/7 streams
+
+## Watching Locally
+
+You can also just watch without streaming:
 
 1. Start the headless server with RCON enabled
 2. Connect to the game via Factorio's multiplayer menu (localhost or your server IP)
@@ -133,6 +171,8 @@ factorio-agent/
 | `FACTORIO_RCON_PORT` | RCON server port | `27015` |
 | `FACTORIO_RCON_PASSWORD` | RCON password | (required) |
 | `FACTORIO_PLAYER` | Player index or name to control | `1` |
+| `FACTORIO_SHOW_COMMANDS` | Show AI commands in game chat | `false` |
+| `FACTORIO_MAX_DISPLAY_LENGTH` | Max chars for displayed commands | `200` |
 
 ## Factorio Lua API Reference
 

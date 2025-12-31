@@ -54,8 +54,8 @@ while true; do
     # --dangerously-skip-permissions: Skip permission prompts for automation
     # --output-format stream-json: Real-time streaming JSON output
     # Pipe through claude-code-log for readable output
-    # Use --continue to resume the most recent conversation in this project
-    if stdbuf -oL "$CLAUDE_BIN" --continue --dangerously-skip-permissions \
+    # Use --no-session-persistence for fresh sessions without conflicts
+    if stdbuf -oL "$CLAUDE_BIN" --no-session-persistence --dangerously-skip-permissions \
         --verbose \
         --print \
         --output-format stream-json \

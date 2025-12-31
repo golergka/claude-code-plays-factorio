@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "You are evaluating whether the orchestrator Claude should stop working.\n\nContext: $ARGUMENTS\n\nCheck the following:\n1. Is the agent still running? (check ./scripts/check-agent-alive.sh)\n2. Are there pending tasks in the todo list?\n3. Has the user explicitly said to stop?\n4. Is stop_hook_active already true? (if so, approve to prevent infinite loops)\n\nIf the agent is alive and work remains, respond with:\n{\"decision\": \"block\", \"reason\": \"Agent still running, continue monitoring\"}\n\nOtherwise:\n{\"decision\": \"approve\", \"reason\": \"Work complete or user requested stop\"}",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "./scripts/maybe-take-screenshot.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

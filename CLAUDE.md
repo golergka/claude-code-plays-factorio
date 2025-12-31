@@ -129,5 +129,38 @@ But prefer using the helper scripts to keep things clean.
 - `scripts/check-agent-alive.sh` - Quick alive check
 - `scripts/factory-status.sh` - Factory status one-liner
 - `scripts/take-screenshot.sh` - Timestamped screenshots
-- `agent-workspace/CLAUDE.md` - Agent's instructions (DO NOT MODIFY)
+- `agent-workspace/CLAUDE.md` - Agent's instructions
 - `agent-workspace/lua/` - Agent's Lua helper scripts
+
+## Improving the Child Agent
+
+**IMPORTANT:** You should periodically improve the child agent (in agent-workspace/).
+
+Since the child Claude cannot restart itself, YOU are responsible for:
+1. Creating new Lua helper scripts in `agent-workspace/lua/`
+2. Updating `agent-workspace/CLAUDE.md` with better instructions
+3. Creating Claude hooks in `agent-workspace/.claude/settings.json`
+4. Writing skills for common agent tasks
+
+**After making improvements, restart the agent** so it picks up the changes:
+```bash
+# Kill current agent
+kill $(cat .agent.lock.d/pid)
+# Wait for it to die
+sleep 5
+# Restart with nudge
+./scripts/run-agent.sh "Improvements made! Check your CLAUDE.md for new instructions."
+```
+
+**What to improve:**
+- Add new Lua helpers when you notice repetitive patterns
+- Update agent's CLAUDE.md when agent struggles with certain tasks
+- Create skills for multi-step operations (crafting chains, building sequences)
+- Add hooks for automatic behaviors
+
+**Use claude-code-guide** to research how to write skills, hooks, and subagents:
+```
+Task tool with subagent_type='claude-code-guide'
+```
+
+This is meta-level guidance - you guide the child Claude by improving its tools and instructions, not by playing the game yourself.

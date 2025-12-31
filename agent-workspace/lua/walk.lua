@@ -1,14 +1,22 @@
--- Generic walk-to-target script
--- Edit TARGET_X and TARGET_Y before running
-local TARGET_X = 84.0
-local TARGET_Y = 51.0  -- Coal resource area
+-- Walk helper - walks towards a target in small steps
+-- Usage: Set TARGET_X and TARGET_Y, then run this script repeatedly
+
+local TARGET_X = 10  -- Edit this
+local TARGET_Y = 54  -- Edit this
 
 local pos = player.position
 local dx = TARGET_X - pos.x
 local dy = TARGET_Y - pos.y
 local distance = math.sqrt(dx * dx + dy * dy)
 
--- Calculate angle and pick direction (8 directions)
+-- Stop if close enough
+if distance < player.reach_distance then
+    player.walking_state = {walking = false}
+    rcon.print(string.format("ARRIVED at (%.1f, %.1f) - distance %.1f", pos.x, pos.y, distance))
+    return
+end
+
+-- Calculate direction based on angle
 local angle = math.atan2(dy, dx)
 local dir, dir_name
 
@@ -38,11 +46,7 @@ else
     dir_name = "northeast"
 end
 
-if distance < player.reach_distance then
-    player.walking_state = {walking = false}
-    rcon.print(string.format("ARRIVED! Distance: %.1f (within reach: %.1f)", distance, player.reach_distance))
-else
-    player.walking_state = {walking = true, direction = dir}
-    rcon.print(string.format("Walking %s | Dist: %.1f | Pos: (%.1f, %.1f) -> (%.1f, %.1f)",
-        dir_name, distance, pos.x, pos.y, TARGET_X, TARGET_Y))
-end
+-- Start walking
+player.walking_state = {walking = true, direction = dir}
+rcon.print(string.format("Walking %s | Dist: %.1f | From (%.1f, %.1f) to (%d, %d)",
+    dir_name, distance, pos.x, pos.y, TARGET_X, TARGET_Y))

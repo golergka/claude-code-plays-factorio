@@ -54,9 +54,8 @@ while true; do
     # --dangerously-skip-permissions: Skip permission prompts for automation
     # --output-format stream-json: Real-time streaming JSON output
     # Pipe through claude-code-log for readable output
-    # Use a fixed session ID for the Factorio agent to avoid conflicts with other conversations
-    AGENT_SESSION_ID="49237f52-50b9-4979-852a-5c27f282a875"
-    if stdbuf -oL "$CLAUDE_BIN" --session-id "$AGENT_SESSION_ID" --dangerously-skip-permissions \
+    # Use --continue to resume the most recent conversation in this project
+    if stdbuf -oL "$CLAUDE_BIN" --continue --dangerously-skip-permissions \
         --verbose \
         --print \
         --output-format stream-json \

@@ -1,20 +1,31 @@
 # Factorio AI Agent
 
-## ⚠️ URGENT: YOU MUST WALK! ⚠️
+## ⚠️ PROXIMITY ENFORCEMENT ACTIVE ⚠️
 
-**YOUR POSITION HAS NOT CHANGED IN HOURS! You are stuck at (0, 50).**
+**Direct entity access is BLOCKED!** You MUST use the safe functions:
 
-Before doing ANYTHING else, execute this walking code:
 ```lua
+-- Find entities within reach (10 tiles)
+local drills = find_reachable{name='burner-mining-drill', force=force}
+
+-- Insert items into nearby entity
+safe_insert(entity, {name='coal', count=5})
+
+-- Take items from nearby entity
+safe_take(entity, {name='iron-ore', count=10})
+
+-- Check if entity is close enough
+if check_proximity(entity, "interact") then
+    -- do something
+end
+```
+
+**If an entity is too far, WALK to it first!**
+```lua
+-- Walk towards a target
 player.walking_state = {walking=true, direction=defines.direction.north}
+-- Then stop: player.walking_state = {walking=false}
 ```
-
-Then in another command:
-```lua
-player.walking_state = {walking=false}
-```
-
-**ALL 17 DRILLS ARE DOWN. WALK to them and diagnose!**
 
 ---
 
@@ -76,28 +87,36 @@ player.walking_state = {walking=true, direction=defines.direction.north}
 -- In next command: player.walking_state = {walking=false}
 ```
 
-## IMPORTANT: No Cheats Policy - READ CAREFULLY!
+## PROXIMITY ENFORCEMENT - TECHNICAL DETAILS
 
-**YOU ARE BEING WATCHED. CHEATING WILL BE DETECTED AND YOU WILL BE RESTARTED.**
-
-You must play like a real player - NO CHEATS:
-- **NO teleporting** - walk to destinations using `walking_state`
-- **NO spawning items** - only get items by mining or crafting
-- **NO instant actions** - mining takes time, walking takes time
-- **NO creating entities from thin air** - use `player.build_from_cursor()` with items you have
-- **NO interacting with far away entities** - MUST walk to them first!
-
-**CRITICAL:** Do NOT use `surface.find_entities_filtered` followed by direct inventory manipulation! This is CHEATING because you're interacting with entities far away.
-
-**WRONG (cheating):**
+**Direct inventory access is BLOCKED at the code level.** These patterns will fail:
 ```lua
-local labs = surface.find_entities_filtered{name='lab', force=force}
-labs[1].get_inventory(...).insert(...)  -- CHEATING! You didn't walk there!
+-- BLOCKED - direct inventory access
+entity.get_inventory(...).insert(...)
+labs[1].get_inventory(defines.inventory.lab_input).insert(...)
 ```
 
-**RIGHT (honest play):**
+**Instead, use the safe functions:**
 ```lua
--- First, find where labs are
+-- WORKS - proximity-checked functions
+safe_insert(entity, items)  -- checks distance first
+safe_take(entity, items)    -- checks distance first
+find_reachable{...}         -- only returns nearby entities
+```
+
+**The system enforces a 10-tile reach distance.** If you try to interact with something farther away, you'll see:
+```
+BLOCKED: insert failed - entity at (40.5, 28.5) is 45.9 tiles away, max reach is 10. WALK CLOSER!
+```
+
+**To interact with distant entities:**
+1. Find where they are: `surface.find_entities_filtered{...}`
+2. Walk towards them using `player.walking_state`
+3. Once close enough, use `safe_insert()` or `safe_take()`
+
+**RIGHT (proximity-aware play):**
+```lua
+-- Find labs and walk to them
 local labs = surface.find_entities_filtered{name='lab', force=force}
 local lab = labs[1]
 -- Check distance

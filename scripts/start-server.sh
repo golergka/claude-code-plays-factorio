@@ -3,7 +3,7 @@
 # Start Factorio Server with RCON
 #
 # This script starts a Factorio headless server with RCON enabled.
-# The server runs the AI agent save file.
+# Uses a separate data directory to allow running alongside the game client.
 #
 
 set -e
@@ -19,7 +19,11 @@ fi
 # Factorio paths
 FACTORIO_APP="/Users/golergka/Library/Application Support/Steam/steamapps/common/Factorio/factorio.app"
 FACTORIO_BIN="$FACTORIO_APP/Contents/MacOS/factorio"
-SAVE_FILE="$HOME/Library/Application Support/factorio/saves/claude-agent.zip"
+
+# Server uses separate data directory to avoid conflicts with game client
+SERVER_DATA="$HOME/Library/Application Support/factorio-server"
+SERVER_CONFIG="$SERVER_DATA/config/config.ini"
+SAVE_FILE="$SERVER_DATA/saves/claude-agent.zip"
 
 # RCON settings
 RCON_PORT="${FACTORIO_RCON_PORT:-27015}"
@@ -41,6 +45,7 @@ echo "Press Ctrl+C to stop the server."
 echo "----------------------------------------"
 
 exec "$FACTORIO_BIN" \
+    --config "$SERVER_CONFIG" \
     --start-server "$SAVE_FILE" \
     --rcon-port "$RCON_PORT" \
     --rcon-password "$RCON_PASSWORD"

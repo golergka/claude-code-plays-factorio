@@ -18,6 +18,9 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 cd "$PROJECT_DIR"
 
+# Claude Code path (it's installed as an alias, so we use the direct path)
+CLAUDE_BIN="$HOME/.claude/local/claude"
+
 # Session name for conversation persistence
 SESSION_NAME="factorio-agent"
 
@@ -46,7 +49,7 @@ while true; do
     # Run Claude Code in headless mode with conversation resume
     # --continue: Resume the previous conversation if it exists
     # --dangerously-skip-permissions: Skip permission prompts for automation
-    if claude --continue --dangerously-skip-permissions \
+    if "$CLAUDE_BIN" --continue --dangerously-skip-permissions \
         --print "You are a Factorio AI agent. Check your current game state and continue building your factory. Start by running: pnpm eval \"player.position\" to see where you are. Use pnpm say to chat with viewers."; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] Agent session ended normally"
     else

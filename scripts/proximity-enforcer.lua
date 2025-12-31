@@ -76,25 +76,22 @@ local function create_entity_proxy(entity)
                 end
             end
 
-            -- Intercept fluidbox access to prevent remote manipulation
+            -- BLOCK ALL fluidbox writes - this is cheating!
+            -- Players must use pumps, pipes, and proper mechanics to move fluids
             if k == "fluidbox" then
                 local real_fluidbox = entity.fluidbox
                 if not real_fluidbox then return nil end
-                -- Return a proxy that checks proximity before allowing changes
                 return setmetatable({}, {
                     __index = function(_, idx)
-                        return real_fluidbox[idx]
+                        return real_fluidbox[idx]  -- reading is OK
                     end,
                     __newindex = function(_, idx, v)
-                        local dist = get_distance(entity)
-                        if dist > REACH_DISTANCE then
-                            local msg = string.format(
-                                "PROXIMITY ERROR: fluidbox at (%.1f, %.1f) is %.1f tiles away (max %d). WALK CLOSER!",
-                                entity.position.x, entity.position.y, dist, REACH_DISTANCE)
-                            rcon.print(msg)
-                            error(msg)
-                        end
-                        real_fluidbox[idx] = v
+                        local msg = string.format(
+                            "FLUIDBOX MANIPULATION BLOCKED! Entity at (%.1f, %.1f). Use pumps/pipes, not cheats!",
+                            entity.position.x, entity.position.y)
+                        rcon.print(msg)
+                        game.print("[color=red][BLOCKED][/color] " .. msg)
+                        error(msg)
                     end,
                     __len = function() return #real_fluidbox end
                 })

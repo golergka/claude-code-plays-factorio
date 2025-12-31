@@ -92,32 +92,26 @@ cleanup() {
 }
 trap cleanup SIGINT SIGTERM EXIT
 
-# Main loop - keep restarting Claude Code
-while true; do
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting agent session..."
+# Run agent once (parent Claude manages restarts)
+echo "[$(date '+%Y-%m-%d %H:%M:%S')] Starting agent session..."
 
-    # Run Claude Code in headless mode with conversation resume
-    # --continue: Resume the previous conversation if it exists
-    # --dangerously-skip-permissions: Skip permission prompts for automation
-    # --output-format stream-json: Real-time streaming JSON output
-    # Pipe through claude-code-log for readable output
-    # Run from .agent-workspace subdirectory for separate session context
-    # Use --add-dir to give access to parent project
-    PROMPT="You are a Factorio AI agent playing Factorio. Run commands from $PROJECT_DIR directory. Check game state: pnpm --prefix $PROJECT_DIR eval player.position"
-    cd "$PROJECT_DIR/agent-workspace"
-    if echo "$PROMPT" | stdbuf -oL "$CLAUDE_BIN" --continue --dangerously-skip-permissions \
-        --verbose \
-        --print \
-        --output-format stream-json \
-        --add-dir "$PROJECT_DIR" \
-        ${NUDGE:+--append-system-prompt "URGENT HINT: $NUDGE"} \
-        | tee -a "$AGENT_LOG" \
-        | jq --unbuffered -C .; then
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Agent session ended normally"
-    else
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Agent session ended with error (exit code: $?)"
-    fi
-
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Restarting in 3 seconds..."
-    sleep 3
-done
+# Run Claude Code in headless mode with conversation resume
+# --continue: Resume the previous conversation if it exists
+# --dangerously-skip-permissions: Skip permission prompts for automation
+# --output-format stream-json: Real-time streaming JSON output
+# Run from .agent-workspace subdirectory for separate session context
+# Use --add-dir to give access to parent project
+PROMPT="You are a Factorio AI agent playing Factorio. Run commands from $PROJECT_DIR directory. Check game state: pnpm --prefix $PROJECT_DIR eval player.position"
+cd "$PROJECT_DIR/agent-workspace"
+if echo "$PROMPT" | stdbuf -oL "$CLAUDE_BIN" --continue --dangerously-skip-permissions \
+    --verbose \
+    --print \
+    --output-format stream-json \
+    --add-dir "$PROJECT_DIR" \
+    ${NUDGE:+--append-system-prompt "URGENT HINT: $NUDGE"} \
+    | tee -a "$AGENT_LOG" \
+    | jq --unbuffered -C .; then
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Agent session ended normally"
+else
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] Agent session ended with error (exit code: $?)"
+fi

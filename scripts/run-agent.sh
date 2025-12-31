@@ -37,6 +37,12 @@ echo "Press Ctrl+C to stop."
 echo ""
 echo "----------------------------------------"
 
+# Optional temporary nudge from command line
+NUDGE="${1:-}"
+if [ -n "$NUDGE" ]; then
+    echo "Temporary nudge: $NUDGE"
+fi
+
 # Trap Ctrl+C for graceful shutdown
 cleanup() {
     echo ""
@@ -62,7 +68,7 @@ while true; do
         --print \
         --output-format stream-json \
         --add-dir "$PROJECT_DIR" \
-        "You are a Factorio AI agent playing Factorio. Run commands from $PROJECT_DIR directory. Check game state: pnpm --prefix $PROJECT_DIR eval \"player.position\"" \
+        "You are a Factorio AI agent playing Factorio. Run commands from $PROJECT_DIR directory. Check game state: pnpm --prefix $PROJECT_DIR eval \"player.position\"${NUDGE:+ IMPORTANT: $NUDGE}" \
         | tee -a "$AGENT_LOG" \
         | jq --unbuffered -C .; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S')] Agent session ended normally"

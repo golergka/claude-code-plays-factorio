@@ -11,6 +11,9 @@ importers:
       dotenv:
         specifier: ^17.2.3
         version: 17.2.3
+      openai:
+        specifier: ^6.15.0
+        version: 6.15.0
       rcon-ts:
         specifier: ^1.2.3
         version: 1.2.3
@@ -203,6 +206,18 @@ packages:
   get-tsconfig@4.13.0:
     resolution: {integrity: sha512-1VKTZJCwBrvbd+Wn3AOgQP/2Av+TfTCOlE4AcRJE72W1ksZXbAx8PPBR9RzgTeSPzlPMHrbANMH3LbltH73wxQ==}
 
+  openai@6.15.0:
+    resolution: {integrity: sha512-F1Lvs5BoVvmZtzkUEVyh8mDQPPFolq4F+xdsx/DO8Hee8YF3IGAlZqUIsF+DVGhqf4aU0a3bTghsxB6OIsRy1g==}
+    hasBin: true
+    peerDependencies:
+      ws: ^8.18.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      ws:
+        optional: true
+      zod:
+        optional: true
+
   rcon-ts@1.2.3:
     resolution: {integrity: sha512-2OTe8IL6ipu9lvY8AEe7UcRrjG9utdXm5EVM5WaTJsI1VpaSmp8yAj8Gxw931wlqk3doeA/3KqZL+tEesLeceA==}
     engines: {node: '>=6.0.0'}
@@ -347,6 +362,8 @@ snapshots:
   get-tsconfig@4.13.0:
     dependencies:
       resolve-pkg-maps: 1.0.0
+
+  openai@6.15.0: {}
 
   rcon-ts@1.2.3:
     dependencies:

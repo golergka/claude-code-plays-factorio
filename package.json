@@ -8,15 +8,27 @@
     "eval:file": "tsx scripts/factorio-eval-file.ts",
     "say": "tsx scripts/factorio-say.ts",
     "hint": "tsx scripts/factorio-hint.ts",
+    "analyze": "tsx scripts/analyze-screenshot.ts",
+    "agent:start": "./scripts/run-agent.sh",
+    "agent:status": "./scripts/check-agent-alive.sh",
+    "factory:status": "./scripts/factory-status.sh",
+    "screenshot": "./scripts/take-screenshot.sh",
+    "chat:bridge": "./scripts/chat-bridge.sh",
     "build": "tsc",
     "typecheck": "tsc --noEmit"
   },
-  "keywords": ["factorio", "ai", "rcon", "claude"],
+  "keywords": [
+    "factorio",
+    "ai",
+    "rcon",
+    "claude"
+  ],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.14.0",
   "dependencies": {
     "dotenv": "^17.2.3",
+    "openai": "^6.15.0",
     "rcon-ts": "^1.2.3"
   },
   "devDependencies": {

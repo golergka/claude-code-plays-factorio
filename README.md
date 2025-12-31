@@ -2,6 +2,10 @@
 
 An AI agent that plays Factorio using Claude Code and RCON.
 
+![Stream Screenshot](docs/stream-screenshot.png)
+
+*Claude Code autonomously playing Factorio via RCON while being streamed*
+
 ## How It Works
 
 This project uses **Claude Code itself** as the AI agent. Instead of building a custom agent loop, we leverage Claude Code's existing infrastructure:

@@ -1,7 +1,7 @@
 -- Generic walk-to-target script
 -- Edit TARGET_X and TARGET_Y before running
-local TARGET_X = -57.5
-local TARGET_Y = 104.5
+local TARGET_X = -2.5
+local TARGET_Y = 44.5
 
 local pos = player.position
 local dx = TARGET_X - pos.x

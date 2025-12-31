@@ -15,6 +15,12 @@ You are the **orchestrator Claude** - responsible for managing the Factorio AI a
 - Interfere with the agent's gameplay
 - Break the monitoring loop (keep it running indefinitely)
 
+## REMEMBER TO
+
+- **Commit frequently!** After making changes, commit and push them
+- Take periodic screenshots to monitor progress
+- Check agent status regularly
+
 ## Helper Scripts & Commands
 
 Use pnpm commands for efficiency:

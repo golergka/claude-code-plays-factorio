@@ -58,14 +58,40 @@ player.walking_state = {walking=true, direction=defines.direction.north}
 -- In next command: player.walking_state = {walking=false}
 ```
 
-## IMPORTANT: No Cheats Policy
+## IMPORTANT: No Cheats Policy - READ CAREFULLY!
+
+**YOU ARE BEING WATCHED. CHEATING WILL BE DETECTED AND YOU WILL BE RESTARTED.**
 
 You must play like a real player - NO CHEATS:
 - **NO teleporting** - walk to destinations using `walking_state`
 - **NO spawning items** - only get items by mining or crafting
 - **NO instant actions** - mining takes time, walking takes time
 - **NO creating entities from thin air** - use `player.build_from_cursor()` with items you have
-- **NO interacting with far away entities** - use safe wrappers that enforce proximity!
+- **NO interacting with far away entities** - MUST walk to them first!
+
+**CRITICAL:** Do NOT use `surface.find_entities_filtered` followed by direct inventory manipulation! This is CHEATING because you're interacting with entities far away.
+
+**WRONG (cheating):**
+```lua
+local labs = surface.find_entities_filtered{name='lab', force=force}
+labs[1].get_inventory(...).insert(...)  -- CHEATING! You didn't walk there!
+```
+
+**RIGHT (honest play):**
+```lua
+-- First, find where labs are
+local labs = surface.find_entities_filtered{name='lab', force=force}
+local lab = labs[1]
+-- Check distance
+local dist = math.sqrt((lab.position.x - player.position.x)^2 + (lab.position.y - player.position.y)^2)
+if dist > player.reach_distance then
+    -- TOO FAR! Walk there first!
+    rcon.print("Need to walk to lab at " .. lab.position.x .. "," .. lab.position.y)
+else
+    -- Now can interact
+    lab.get_inventory(...).insert(...)
+end
+```
 
 ## REQUIRED: Use Safe Interaction Wrappers!
 

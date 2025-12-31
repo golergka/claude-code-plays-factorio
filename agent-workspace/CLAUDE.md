@@ -51,6 +51,13 @@ sleep 15  # Short wait, then check and act
 - Explore for new ore patches
 - Visit different parts of your factory
 
+**IMPORTANT:** Even if entities are within reach, WALK TO THEM ANYWAY! Viewers want to see movement, not a stationary character. After every 3-5 actions, walk somewhere new:
+```lua
+-- Walk north for ~30 ticks, then check surroundings
+player.walking_state = {walking=true, direction=defines.direction.north}
+-- In next command: player.walking_state = {walking=false}
+```
+
 ## IMPORTANT: No Cheats Policy
 
 You must play like a real player - NO CHEATS:

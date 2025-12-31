@@ -1,6 +1,6 @@
 #!/bin/bash
 # Factorio AI Agent Runner
-# Simple and reliable - kills any existing agents before starting
+# Ensures only ONE agent runs at a time by killing any existing ones first
 
 set -e
 
@@ -9,9 +9,19 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 cd "$PROJECT_DIR"
 
-# ALWAYS kill existing agents first - no exceptions
-echo "Killing any existing agents..."
-"$SCRIPT_DIR/kill-all-agents.sh"
+# Kill any existing Claude agents in agent-workspace before starting
+echo "Checking for existing agents..."
+EXISTING_PIDS=$(lsof 2>/dev/null | grep "claude" | grep "agent-workspace" | awk '{print $2}' | sort -u)
+if [ -n "$EXISTING_PIDS" ]; then
+    for PID in $EXISTING_PIDS; do
+        echo "Killing existing agent PID $PID"
+        kill -9 "$PID" 2>/dev/null || true
+    done
+    sleep 1
+fi
+
+# Also kill lingering sleep processes from old agents
+pkill -9 -f "sleep.*factorio-agent" 2>/dev/null || true
 
 AGENT_LOG="$PROJECT_DIR/.agent-output.jsonl"
 CLAUDE_BIN="$HOME/.claude/local/claude"
@@ -27,7 +37,6 @@ fi
 
 echo "Starting Claude Code..."
 
-# Run agent
 cd "$PROJECT_DIR/agent-workspace"
 PROMPT="You are a Factorio AI agent playing Factorio. Run commands from $PROJECT_DIR directory."
 

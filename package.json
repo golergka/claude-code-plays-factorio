@@ -10,7 +10,6 @@
     "hint": "tsx scripts/factorio-hint.ts",
     "analyze": "tsx scripts/analyze-screenshot.ts",
     "agent:start": "./scripts/run-agent.sh",
-    "agent:kill": "./scripts/kill-all-agents.sh",
     "agent:status": "./scripts/check-agent-alive.sh",
     "factory:status": "./scripts/factory-status.sh",
     "screenshot": "./scripts/take-screenshot.sh",

@@ -18,24 +18,45 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 cd "$PROJECT_DIR"
 
-# Lock file to prevent multiple instances
-LOCK_FILE="$PROJECT_DIR/.agent.lock"
+# Lock directory for atomic locking (mkdir is atomic on POSIX)
+LOCK_DIR="$PROJECT_DIR/.agent.lock.d"
+LOCK_PID_FILE="$LOCK_DIR/pid"
 
-# Check for existing instance
-if [ -f "$LOCK_FILE" ]; then
-    EXISTING_PID=$(cat "$LOCK_FILE")
-    if kill -0 "$EXISTING_PID" 2>/dev/null; then
-        echo "ERROR: Agent already running (PID $EXISTING_PID)"
-        echo "Kill it first: kill $EXISTING_PID"
-        exit 1
+# Attempt to acquire lock atomically
+acquire_lock() {
+    if mkdir "$LOCK_DIR" 2>/dev/null; then
+        # Got the lock - write our PID
+        echo $$ > "$LOCK_PID_FILE"
+        return 0
     else
-        echo "Stale lock file found, removing..."
-        rm "$LOCK_FILE"
+        # Lock exists - check if holder is alive
+        if [ -f "$LOCK_PID_FILE" ]; then
+            EXISTING_PID=$(cat "$LOCK_PID_FILE" 2>/dev/null)
+            if [ -n "$EXISTING_PID" ] && kill -0 "$EXISTING_PID" 2>/dev/null; then
+                echo "ERROR: Agent already running (PID $EXISTING_PID)"
+                echo "Kill it first: kill $EXISTING_PID"
+                return 1
+            else
+                # Stale lock - remove and retry
+                echo "Removing stale lock (process $EXISTING_PID not running)..."
+                rm -rf "$LOCK_DIR"
+                if mkdir "$LOCK_DIR" 2>/dev/null; then
+                    echo $$ > "$LOCK_PID_FILE"
+                    return 0
+                fi
+            fi
+        fi
+        echo "ERROR: Could not acquire lock"
+        return 1
     fi
+}
+
+# Try to acquire lock
+if ! acquire_lock; then
+    exit 1
 fi
 
-# Write our PID to lock file
-echo $$ > "$LOCK_FILE"
+echo "Lock acquired (PID $$)"
 
 # Log file for agent output (can be watched by watch-agent.sh)
 AGENT_LOG="$PROJECT_DIR/.agent-output.jsonl"
@@ -66,7 +87,7 @@ fi
 cleanup() {
     echo ""
     echo "Shutting down Factorio AI Agent..."
-    rm -f "$LOCK_FILE"
+    rm -rf "$LOCK_DIR"
     exit 0
 }
 trap cleanup SIGINT SIGTERM EXIT

@@ -18,3 +18,4 @@ dist/
 Thumbs.db
 .agent-output.jsonl
 .agent.lock
+.agent.lock.d/

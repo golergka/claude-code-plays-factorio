@@ -29,12 +29,40 @@ SAVE_FILE="$SERVER_DATA/saves/claude-agent.zip"
 RCON_PORT="${FACTORIO_RCON_PORT:-27015}"
 RCON_PASSWORD="${FACTORIO_RCON_PASSWORD:-claudeagent2024}"
 
+# Find the best save to load (prefer autosaves over main save)
+# Autosaves are in the saves directory as _autosave*.zip
+find_best_save() {
+    local saves_dir="$SERVER_DATA/saves"
+
+    # Look for most recent autosave
+    local latest_autosave=$(ls -t "$saves_dir"/_autosave*.zip 2>/dev/null | head -1)
+    if [ -n "$latest_autosave" ] && [ -f "$latest_autosave" ]; then
+        echo "$latest_autosave"
+        return
+    fi
+
+    # Fall back to main save
+    if [ -f "$SAVE_FILE" ]; then
+        echo "$SAVE_FILE"
+        return
+    fi
+
+    # No save exists - will create new
+    echo ""
+}
+
+LOAD_SAVE=$(find_best_save)
+if [ -z "$LOAD_SAVE" ]; then
+    echo "No existing save found - will create new game"
+    LOAD_SAVE="$SAVE_FILE"
+fi
+
 echo "========================================"
 echo "  Factorio AI Server"
 echo "========================================"
 echo ""
 echo "Starting Factorio server..."
-echo "  Save: $SAVE_FILE"
+echo "  Loading: $LOAD_SAVE"
 echo "  RCON Port: $RCON_PORT"
 echo "  Game Port: 34197"
 echo ""
@@ -46,6 +74,6 @@ echo "----------------------------------------"
 
 exec "$FACTORIO_BIN" \
     --config "$SERVER_CONFIG" \
-    --start-server "$SAVE_FILE" \
+    --start-server "$LOAD_SAVE" \
     --rcon-port "$RCON_PORT" \
     --rcon-password "$RCON_PASSWORD"

@@ -97,6 +97,23 @@ Screenshots are saved to:
 /Users/golergka/Library/Application Support/factorio/script-output/
 ```
 
+## Viewing Screenshots
+
+**IMPORTANT:** You can and should regularly view screenshots to understand factory state!
+
+```bash
+# Take and view screenshot
+./scripts/take-screenshot.sh check
+# Then use Read tool to view:
+Read "/Users/golergka/Library/Application Support/factorio/script-output/orchestrator-TIMESTAMP-check.png"
+```
+
+Do this periodically to:
+- Visually verify factory layout
+- Check drill/furnace placement
+- Spot resource patches
+- Understand spatial relationships
+
 ## Direct Game Queries (Fallback)
 
 If helper scripts fail, you can query the game directly:

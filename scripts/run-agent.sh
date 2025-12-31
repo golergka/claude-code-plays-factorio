@@ -18,6 +18,25 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 cd "$PROJECT_DIR"
 
+# Lock file to prevent multiple instances
+LOCK_FILE="$PROJECT_DIR/.agent.lock"
+
+# Check for existing instance
+if [ -f "$LOCK_FILE" ]; then
+    EXISTING_PID=$(cat "$LOCK_FILE")
+    if kill -0 "$EXISTING_PID" 2>/dev/null; then
+        echo "ERROR: Agent already running (PID $EXISTING_PID)"
+        echo "Kill it first: kill $EXISTING_PID"
+        exit 1
+    else
+        echo "Stale lock file found, removing..."
+        rm "$LOCK_FILE"
+    fi
+fi
+
+# Write our PID to lock file
+echo $$ > "$LOCK_FILE"
+
 # Log file for agent output (can be watched by watch-agent.sh)
 AGENT_LOG="$PROJECT_DIR/.agent-output.jsonl"
 
@@ -47,9 +66,10 @@ fi
 cleanup() {
     echo ""
     echo "Shutting down Factorio AI Agent..."
+    rm -f "$LOCK_FILE"
     exit 0
 }
-trap cleanup SIGINT SIGTERM
+trap cleanup SIGINT SIGTERM EXIT
 
 # Main loop - keep restarting Claude Code
 while true; do

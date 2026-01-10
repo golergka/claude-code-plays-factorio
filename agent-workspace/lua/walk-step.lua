@@ -1,9 +1,9 @@
 -- Walk toward target with BUILT-IN TIMEOUT
 -- Edit TARGET_X and TARGET_Y, then run repeatedly until ARRIVED!
 -- TIMEOUT: Walking stops after ~2 seconds (120 ticks)
-local TARGET_X = 11.5
-local TARGET_Y = -105.0
-local WALK_TIMEOUT = 120  -- ticks (~2 seconds at 60 UPS)
+local TARGET_X = 40
+local TARGET_Y = 28
+local WALK_TIMEOUT = 30  -- ticks (0.5 seconds)
 
 -- Initialize global storage if needed
 if not global.walk_state then global.walk_state = {} end

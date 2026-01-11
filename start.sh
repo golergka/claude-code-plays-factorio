@@ -4,6 +4,9 @@
 
 set -e
 
+# Add common binary locations to PATH (claude, bun, etc.)
+export PATH="$HOME/.claude/local:$HOME/.bun/bin:$HOME/.local/bin:$PATH"
+
 PROJECT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$PROJECT_DIR"
 

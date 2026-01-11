@@ -27,6 +27,21 @@ if ! curl -s http://localhost:8765/mcp/ > /dev/null 2>&1; then
     cd "$PROJECT_DIR"
 fi
 
+# Check if Factorio server is running (test RCON connection)
+if ! pnpm eval "game.tick" > /dev/null 2>&1; then
+    echo "Starting Factorio server..."
+    pnpm server:start &
+    sleep 5
+    echo "Waiting for server to be ready..."
+    for i in {1..30}; do
+        if pnpm eval "game.tick" > /dev/null 2>&1; then
+            echo "Factorio server is ready!"
+            break
+        fi
+        sleep 1
+    done
+fi
+
 # Create logs directory if not exists
 mkdir -p logs
 

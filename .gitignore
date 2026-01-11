@@ -20,3 +20,4 @@ Thumbs.db
 .agent.lock
 .agent.lock.d/
 .last-screenshot-time
+.claude/ralph-loop.local.md

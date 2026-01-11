@@ -11,13 +11,16 @@ echo "=== Factorio Multi-Agent System ==="
 echo "Project directory: $PROJECT_DIR"
 
 # Check if claude-runner is available
+echo "Checking claude-runner..."
 if ! command -v claude-runner &> /dev/null; then
     echo "ERROR: claude-runner not found. Please install it first."
     exit 1
 fi
+echo "✓ claude-runner found"
 
 # Check if mcp_agent_mail server is running
-if ! curl -s http://localhost:8765/mcp/ > /dev/null 2>&1; then
+echo "Checking mcp_agent_mail..."
+if ! curl -s --connect-timeout 2 http://localhost:8765/mcp/ > /dev/null 2>&1; then
     echo "WARNING: mcp_agent_mail server not responding on port 8765"
     echo "Starting mcp_agent_mail server..."
     cd /Users/golergka/Projects/mcp_agent_mail
@@ -25,9 +28,12 @@ if ! curl -s http://localhost:8765/mcp/ > /dev/null 2>&1; then
     python -m mcp_agent_mail.cli serve-http --port 8765 &
     sleep 3
     cd "$PROJECT_DIR"
+else
+    echo "✓ mcp_agent_mail already running"
 fi
 
 # Check if Factorio server is running (test RCON connection)
+echo "Checking Factorio server..."
 if ! pnpm eval "game.tick" > /dev/null 2>&1; then
     echo "Starting Factorio server..."
     pnpm server:start &
@@ -35,11 +41,13 @@ if ! pnpm eval "game.tick" > /dev/null 2>&1; then
     echo "Waiting for server to be ready..."
     for i in {1..30}; do
         if pnpm eval "game.tick" > /dev/null 2>&1; then
-            echo "Factorio server is ready!"
+            echo "✓ Factorio server is ready!"
             break
         fi
         sleep 1
     done
+else
+    echo "✓ Factorio server already running"
 fi
 
 # Create logs directory if not exists

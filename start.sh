@@ -20,7 +20,7 @@ echo "✓ claude-runner found"
 
 # Check if mcp_agent_mail server is running
 echo "Checking mcp_agent_mail..."
-if ! curl -s --connect-timeout 2 http://localhost:8765/mcp/ > /dev/null 2>&1; then
+if ! nc -z localhost 8765 2>/dev/null; then
     echo "WARNING: mcp_agent_mail server not responding on port 8765"
     echo "Starting mcp_agent_mail server..."
     cd /Users/golergka/Projects/mcp_agent_mail

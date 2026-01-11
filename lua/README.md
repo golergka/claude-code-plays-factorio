@@ -4,10 +4,16 @@ Tools for the Player agent to interact with Factorio.
 
 ## Usage
 
-All tools are Lua functions called via RCON:
+Use the `pnpm tool` command to run tools with parameters:
 
 ```bash
-pnpm eval "dofile('lua/api/TOOL.lua')(PARAMS)"
+pnpm tool <toolname> [param1=value1] [param2=value2] ...
+```
+
+Or run without parameters using `pnpm eval:file`:
+
+```bash
+pnpm eval:file lua/api/status.lua
 ```
 
 ## Available Tools

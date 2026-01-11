@@ -12,44 +12,51 @@ You are the **Player** - you play Factorio using tools provided by the Tool Crea
 
 ## How to Play
 
-All game actions happen through Lua tools in `/lua/api/`:
+All game actions happen through the `pnpm tool` command:
 
 ```bash
 # From project root
-pnpm eval:file lua/api/walk.lua          # Walk
-pnpm eval:file lua/api/mine.lua          # Mine
-pnpm eval:file lua/api/build.lua         # Build
-pnpm eval:file lua/api/craft.lua         # Craft
-pnpm eval:file lua/api/interact.lua      # Insert/remove items
-pnpm eval:file lua/api/status.lua        # Check game state
+pnpm tool status                          # Check game state
+pnpm tool walk DIRECTION=north DURATION=2 # Walk
+pnpm tool mine TARGET=iron-ore COUNT=10   # Mine
+pnpm tool build ITEM=stone-furnace        # Build
+pnpm tool craft RECIPE=iron-gear-wheel    # Craft
+pnpm tool interact ACTION=insert ...      # Insert/remove items
+pnpm tool research                        # Check/start research
 ```
 
 **Read `/lua/README.md`** for full documentation of each tool!
 
-## Tool Usage Pattern
-
-Tools are Lua functions that take parameters:
+## Tool Usage Examples
 
 ```bash
 # Walk north for 2 seconds
-pnpm eval "dofile('lua/api/walk.lua')({direction='north', duration=2})"
+pnpm tool walk DIRECTION=north DURATION=2
 
-# Mine iron ore
-pnpm eval "dofile('lua/api/mine.lua')({target='iron-ore', count=10})"
+# Mine 10 iron ore
+pnpm tool mine TARGET=iron-ore COUNT=10
 
 # Build a stone furnace at relative position
-pnpm eval "dofile('lua/api/build.lua')({item='stone-furnace', offset={x=2, y=0}})"
+pnpm tool build ITEM=stone-furnace OFFSET_X=2 OFFSET_Y=0
+
+# Insert coal into nearest furnace
+pnpm tool interact ACTION=insert ENTITY_NAME=stone-furnace ITEM_NAME=coal ITEM_COUNT=5
+
+# Start researching automation
+pnpm tool research RESEARCH_ACTION=start TECHNOLOGY=automation
 ```
 
 ## Getting Game State
 
-Use status.lua to understand your surroundings:
+Use status tool to understand your surroundings:
 
 ```bash
-pnpm eval "dofile('lua/api/status.lua')({query='position'})"
-pnpm eval "dofile('lua/api/status.lua')({query='inventory'})"
-pnpm eval "dofile('lua/api/status.lua')({query='nearby_resources'})"
-pnpm eval "dofile('lua/api/status.lua')({query='buildings'})"
+pnpm tool status QUERY=position          # Your position
+pnpm tool status QUERY=inventory         # What you have
+pnpm tool status QUERY=nearby_resources  # Resources around you
+pnpm tool status QUERY=buildings         # Your buildings
+pnpm tool status QUERY=research          # Research progress
+pnpm tool status                         # All of the above
 ```
 
 ## Screenshots

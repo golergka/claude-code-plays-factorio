@@ -1,27 +1,49 @@
-# Factorio AI Agent
+# Factorio AI Multi-Agent System
 
-An AI agent that plays Factorio using Claude Code and RCON.
+A 4-agent AI system that plays Factorio autonomously using Claude Code and RCON.
 
 ![Stream Screenshot](docs/stream-screenshot.png)
 
-*Claude Code autonomously playing Factorio via RCON while being streamed*
+*Claude Code agents autonomously playing Factorio via RCON*
 
 **Follow the stream:** [Twitter/X Thread](https://x.com/GolerGkA/status/2006222252136632715)
 
-## How It Works
+## Architecture
 
-This project uses **Claude Code itself** as the AI agent. Instead of building a custom agent loop, we leverage Claude Code's existing infrastructure:
+This project uses a **4-agent architecture** where each agent has a distinct role:
 
-1. **RCON Eval Script** (`scripts/factorio-eval.ts`) - Sends Lua commands to Factorio and returns results
-2. **CLAUDE.md** - Instructions teaching Claude Code how to play Factorio
-3. **Agent Runner** (`scripts/run-agent.sh`) - Keeps Claude Code running continuously
+```
+Orchestrator (manages system)
+  |
+  +-- Tool Creator (creates Lua tools for gameplay)
+  +-- Player (plays using the tools)
+  +-- Strategist (sets goals, monitors progress)
+```
 
-The agent can execute arbitrary Lua commands, query game state, and control a player character to build a factory.
+All agents communicate via **mcp_agent_mail** and are managed by **claude-runner**.
+
+### Agent Roles
+
+| Agent | Role | Access |
+|-------|------|--------|
+| **Orchestrator** | Meta-manager, spawns/restarts agents, updates instructions | Everything |
+| **Tool Creator** | Creates Lua tools in `lua/api/`, enforces realistic gameplay | Lua files, pnpm commands |
+| **Player** | Plays Factorio using CLI tools | `./factorio` CLI only |
+| **Strategist** | Sets goals for Player, monitors progress | Logs (read), mail |
+
+### Anti-Cheat by Design
+
+Anti-cheat is **architectural**, not runtime:
+- Player can ONLY use the `factorio` CLI (no raw Lua)
+- The CLI only executes tools from `lua/api/`
+- Tool Creator writes the tools - if they don't write cheats, Player can't cheat
 
 ## Prerequisites
 
 - **Node.js** 18+ and **pnpm**
 - **Claude Code** installed (`npm install -g @anthropic-ai/claude-code`)
+- **claude-runner** (for managing agent processes)
+- **mcp_agent_mail** (for agent communication)
 - **Factorio** (Steam or standalone version)
 
 ## Setup
@@ -41,133 +63,134 @@ cp .env.example .env
 # Edit .env with your RCON password and player target
 ```
 
-### 3. Start Factorio with RCON
+### 3. Install mcp_agent_mail
+
+```bash
+# Clone and set up mcp_agent_mail
+git clone https://github.com/Dicklesworthstone/mcp_agent_mail
+cd mcp_agent_mail
+python -m venv .venv
+source .venv/bin/activate
+pip install -e .
+```
+
+### 4. Start Factorio Server
 
 Factorio must run as a **dedicated server** (RCON doesn't work in single-player).
 
 ```bash
 # Create a save file first (via game UI), then:
+pnpm server:start
+```
+
+Or manually:
+```bash
 factorio --start-server /path/to/saves/your-save.zip \
          --rcon-port 27015 \
          --rcon-password your_password_here
 ```
 
-### 4. Test Connection
+### 5. Test Connection
 
 ```bash
 pnpm eval "player.position"
 # Should output something like: {x = 0, y = 0}
 ```
 
-## Streaming Setup (Twitch/YouTube)
+## Running the System
 
-Perfect for running an autonomous AI stream!
-
-### Setup
-
-1. **Start the headless server** with RCON enabled
-2. **Launch Factorio client** and connect via multiplayer (Direct Connect → `localhost`)
-3. **Follow the agent's character**: Type `/follow 1` in game chat (or the agent's player name)
-4. **Enable command display** in `.env`:
-   ```
-   FACTORIO_SHOW_COMMANDS=true
-   ```
-5. **Start OBS** and capture the Factorio window
-6. **Run the agent**: `./scripts/run-agent.sh`
-
-### What Viewers Will See
-
-- The game camera following the AI-controlled character
-- Every command the AI executes appears in the game chat with `[AI]` prefix
-- The agent mining, building, crafting, and expanding the factory
-
-### Camera Lock
-
-Use `/follow <player>` to lock your camera to the agent:
-```
-/follow 1
-```
-
-To stop following: `/follow` (no argument)
-
-### Tips for Streaming
-
-- Create a fresh save in peaceful mode for smoother gameplay
-- Set `FACTORIO_MAX_DISPLAY_LENGTH=100` for shorter chat messages
-- Consider adding a "Now Playing: AI Factory" overlay in OBS
-- The agent runs indefinitely - perfect for 24/7 streams
-
-## Watching Locally
-
-You can also just watch without streaming:
-
-1. Start the headless server with RCON enabled
-2. Connect to the game via Factorio's multiplayer menu (localhost or your server IP)
-3. The agent controls the player configured in `FACTORIO_PLAYER` (default: player index 1)
-4. You'll see the agent's character moving, building, and crafting in real-time
-
-The agent and observer share the same force (team), so you'll have shared research and buildings.
-
-## Usage
-
-### Manual Mode
-
-Run individual Lua commands:
+### Start Everything
 
 ```bash
-# Get player position
-pnpm eval "player.position"
-
-# Get inventory
-pnpm eval "player.get_main_inventory().get_contents()"
-
-# Find nearby resources
-pnpm eval "surface.find_entities_filtered{position=player.position, radius=50, type=\"resource\"}"
-
-# Craft items
-pnpm eval "player.begin_crafting{recipe=\"iron-gear-wheel\", count=5}"
+./start.sh
 ```
 
-### Autonomous Agent Mode
+This will:
+1. Start mcp_agent_mail server (if not running)
+2. Start Factorio server (if not running)
+3. Launch the Orchestrator via claude-runner
+4. Orchestrator spawns the other 3 agents
 
-Run Claude Code as a continuous agent:
+### Manual Agent Startup
+
+If you prefer to start agents manually:
 
 ```bash
-./scripts/run-agent.sh
+# Start mcp_agent_mail
+cd /path/to/mcp_agent_mail && source .venv/bin/activate
+python -m mcp_agent_mail.cli serve-http --port 8765 &
+
+# Start Factorio server
+pnpm server:start &
+
+# Start Orchestrator (which spawns other agents)
+claude-runner --task-file CLAUDE.md --working-dir . --session-id factorio-orchestrator
 ```
 
-This starts Claude Code in a loop. The agent will:
-1. Check the current game state
-2. Decide what to do next
-3. Execute Lua commands via `pnpm eval`
-4. Repeat indefinitely
+## Player CLI
 
-Press `Ctrl+C` to stop.
-
-### Interactive Mode
-
-Just run Claude Code in this directory:
+The Player agent uses a simple CLI interface:
 
 ```bash
-claude
+# From player/ directory
+./factorio status              # Check game state
+./factorio walk north 2        # Walk north for 2 seconds
+./factorio mine iron-ore 10    # Mine 10 iron ore
+./factorio build stone-furnace # Place a furnace
+./factorio craft iron-gear-wheel 5
+./factorio interact insert stone-furnace coal 10
+./factorio research start automation
+./factorio screenshot
+./factorio --help              # List all commands
 ```
-
-Claude will read CLAUDE.md and understand how to play Factorio. You can chat with it and give it goals.
 
 ## Project Structure
 
 ```
 factorio-agent/
-├── CLAUDE.md              # Agent instructions (read by Claude Code)
-├── README.md              # This file
+├── CLAUDE.md              # Orchestrator instructions
+├── start.sh               # Entry point (starts everything)
 ├── package.json
-├── tsconfig.json
-├── .env.example           # Environment template
-├── .env                   # Your configuration (not in git)
-└── scripts/
-    ├── factorio-eval.ts   # RCON Lua execution script
-    └── run-agent.sh       # Continuous agent runner
+│
+├── lua/                   # Shared: Tool Creator writes, Player uses
+│   ├── api/               # Lua tools (status, walk, mine, build, etc.)
+│   └── README.md          # Tool documentation
+│
+├── logs/                  # Shared logs
+│   ├── tool-usage.log     # All tool invocations
+│   └── tool-errors.log    # Errors
+│
+├── tool-creator/          # Tool Creator workspace
+│   └── CLAUDE.md
+├── player/                # Player workspace
+│   ├── CLAUDE.md
+│   └── factorio           # CLI wrapper script
+├── strategist/            # Strategist workspace
+│   └── CLAUDE.md
+│
+└── scripts/               # TypeScript tools
+    ├── factorio-cli.ts    # Player CLI
+    ├── factorio-eval.ts   # Raw Lua execution
+    └── factorio-tool.ts   # Tool execution
 ```
+
+## Streaming Setup
+
+Perfect for running an autonomous AI stream!
+
+### Setup
+
+1. **Start the system** with `./start.sh`
+2. **Launch Factorio client** and connect via multiplayer (Direct Connect → `localhost`)
+3. **Follow the agent's character**: Type `/follow 1` in game chat
+4. **Start OBS** and capture the Factorio window
+
+### What Viewers Will See
+
+- The game camera following the AI-controlled character
+- Agent communication via mcp_agent_mail
+- Every command logged to `logs/tool-usage.log`
+- The agent mining, building, crafting, and expanding the factory
 
 ## Environment Variables
 
@@ -178,52 +201,20 @@ factorio-agent/
 | `FACTORIO_RCON_PASSWORD` | RCON password | (required) |
 | `FACTORIO_PLAYER` | Player index or name to control | `1` |
 | `FACTORIO_SHOW_COMMANDS` | Show AI commands in game chat | `false` |
-| `FACTORIO_MAX_DISPLAY_LENGTH` | Max chars for displayed commands | `200` |
 
 ## Factorio Lua API Reference
 
-The agent uses Factorio's Lua API via RCON. Key classes:
+The tools use Factorio's Lua API via RCON. Key classes:
 
 - [LuaGameScript](https://lua-api.factorio.com/latest/classes/LuaGameScript.html) - `game.*`
 - [LuaPlayer](https://lua-api.factorio.com/latest/classes/LuaPlayer.html) - `player.*`
 - [LuaSurface](https://lua-api.factorio.com/latest/classes/LuaSurface.html) - `surface.*`
 - [LuaControl](https://lua-api.factorio.com/latest/classes/LuaControl.html) - Player actions
-- [LuaRCON](https://lua-api.factorio.com/latest/classes/LuaRCON.html) - Output via `rcon.print()`
-
-## Tips
-
-### Creating a Good Starting Save
-
-1. Start a new game in Factorio
-2. Enable peaceful mode for easier agent testing
-3. Save the game
-4. Exit and run the server with RCON enabled
-
-### Debugging
-
-If commands aren't working:
-
-```bash
-# Test raw RCON connection
-pnpm eval "game.tick"
-
-# List all players
-pnpm eval "(function() local p = {} for _, pl in pairs(game.players) do table.insert(p, {index=pl.index, name=pl.name}) end return p end)()"
-
-# Check targeted player
-pnpm eval "player.name"
-```
-
-### Performance
-
-- The agent connects/disconnects for each command (simple but not optimal)
-- For better performance, you could modify `factorio-eval.ts` to maintain a persistent connection
 
 ## Limitations
 
 - **Single-player not supported**: RCON only works with dedicated servers
 - **Achievements disabled**: Using Lua commands disables Steam achievements
-- **No visual feedback**: The agent doesn't see the game visually; it relies on Lua queries
 
 ## License
 

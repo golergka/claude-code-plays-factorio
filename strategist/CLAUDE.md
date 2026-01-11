@@ -59,8 +59,7 @@ assemblers → automation science → research speed
 
 ## Monitoring
 
-Ask Player for status updates:
-
+### Ask Player for Status
 ```
 To: Player
 Subject: Status Request
@@ -70,6 +69,32 @@ Body: Please report:
 3. Buildings placed
 4. Current research progress
 ```
+
+### Read Game Logs Directly
+
+You have read access to game logs in `../logs/`:
+
+```bash
+# See recent tool commands
+grep "mine\|build" ../logs/tool-usage.log | tail -20
+
+# Check for errors
+cat ../logs/tool-errors.log
+
+# See what Player has been doing
+tail -50 ../logs/tool-usage.log
+```
+
+### Request Screenshots
+
+Ask Player to take screenshots when you need visual information:
+```
+To: Player
+Subject: Screenshot Request
+Body: Please take a screenshot of the base. I want to see the layout.
+```
+
+You can then read the screenshot image to analyze the factory visually.
 
 ## Decision Making
 

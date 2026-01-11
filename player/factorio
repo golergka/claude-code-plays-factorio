@@ -1,0 +1,8 @@
+#!/bin/bash
+# Factorio CLI wrapper for Player agent
+# This script allows Player to run factorio commands from their working directory
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
+cd "$PROJECT_ROOT" && pnpm factorio "$@"

@@ -87,22 +87,40 @@ All agents register with mcp_agent_mail:
   start.sh                  # Entry point script
 
   lua/                      # SHARED: Tool Creator writes, Player reads
-    api/                    # Core API tools
-    helpers/                # Utility functions
+    api/                    # Lua tools (Tool Creator owns this)
     README.md               # Tool documentation
 
-  logs/                     # SHARED: All agents can read/write
-    tool-usage.log          # Every tool invocation
-    tool-errors.log         # Errors (interrupts Tool Creator)
-    game-events.log         # Significant game events
+  logs/                     # SHARED: All agents can read
+    tool-usage.log          # Every tool invocation (from CLI)
+    tool-errors.log         # Errors (from CLI)
     output-*.jsonl          # Agent outputs
 
   tool-creator/             # Tool Creator's workspace
   player/                   # Player's workspace
+    factorio                # CLI wrapper for Player
   strategist/               # Strategist's workspace
 
-  scripts/                  # TypeScript tools (factorio-eval, etc.)
+  scripts/                  # TypeScript tools
+    factorio-cli.ts         # Player's game interface
+    factorio-eval.ts        # Raw Lua execution
+    factorio-tool.ts        # Tool execution (used by CLI)
 ```
+
+## Architecture: Separation of Concerns
+
+**Anti-cheat is architectural, not runtime:**
+- Player can ONLY use the `factorio` CLI (in player/ directory)
+- The CLI only executes tools from `lua/api/`
+- Tool Creator writes the tools - if they don't write cheats, Player can't cheat
+- Player doesn't know about `pnpm` or raw Lua execution
+
+**Access levels:**
+| Agent | Can Access |
+|-------|------------|
+| Player | ./factorio CLI, screenshots, logs (read) |
+| Tool Creator | lua/api/ (write), pnpm commands (testing) |
+| Strategist | logs (read), mail |
+| Orchestrator | Everything |
 
 ## Available pnpm Commands
 
@@ -110,7 +128,9 @@ Use these for game/server interaction (rarely - let agents do it):
 
 ```bash
 pnpm server:start          # Start Factorio server
-pnpm eval "lua code"       # Execute Lua via RCON
+pnpm factorio <cmd>        # Player CLI (factorio walk north)
+pnpm tool <name> [params]  # Run Lua tool (internal)
+pnpm eval "lua code"       # Execute raw Lua via RCON
 pnpm eval:file path.lua    # Execute Lua file
 pnpm say "message"         # Chat in game
 pnpm screenshot [suffix]   # Take screenshot
